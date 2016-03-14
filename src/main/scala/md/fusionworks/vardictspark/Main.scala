@@ -14,7 +14,7 @@ import Implicits._
   * Created by antonstamov on 3/13/16.
   */
 object Main extends App {
-  val basePath = "/home/ubuntu/work/data/chr20_dataset/raw"
+  val basePath = "/home/user/Data/chr20_dataset/raw"
   val bamPath = s"$basePath/dedupped_20.bam"
   val bedPath = s"$basePath/sample_dedupped_20.bed"
   val fastaPath = s"$basePath/human_b37_20.fasta"
@@ -22,24 +22,24 @@ object Main extends App {
   val regions = VarDictSpark.loadRegions(bedPath).collect()
   val fasta = VarDictSpark.loadFasta(fastaPath).persist(StorageLevel.MEMORY_AND_DISK)
   val sc = VarDictSpark.sc
-  val bam = sc.loadAlignments(bamPath).persist(StorageLevel.MEMORY_AND_DISK)
+  val samRDD = sc.loadSamRecordRDD(bamPath).persist(StorageLevel.MEMORY_AND_DISK)
   var vdElems = sc.parallelize(Seq.empty[VarDictRDDElem])
   regions.foreach { region =>
     val f = VarDictSpark.filterFasta(fasta, region).map(n => n.position -> n.value).collect().toMap
-    val b = bam.filterAlignmentRDD(region.start, region.end, region.chr).toSamRecordRDD(region.chr).collect()
+    val b = samRDD.filterSAMRecordRDD(region.start, region.end, region.chr).collect()
 
     vdElems = vdElems.union(sc.parallelize(Seq(VarDictRDDElem(region, f, b))))
 
   }
   vdElems.foreach { e =>
-
+    println(e)
+    VarDict.toVars(e.region.toVDRegion,e.bam,e.ref,Map("20"->20000000),)
     /**
       * TODO:
       * VarDict.toVars()
       * VarDict.vardict()
       * */
 
-//
   }
 
 }
@@ -73,12 +73,17 @@ object VarDictSpark {
   }
 }
 
-case class Region(chr: String, start: Int, end: Int /*, gene: String, iStart: Int, iEnd: Int*/)
+case class Region(chr: String, start: Int, end: Int , gene: String/*, iStart: Int, iEnd: Int*/) {
+  import com.astrazeneca.vardict.{Region => VDRegion}
+  def toVDRegion:VDRegion = {
+    new VDRegion(chr,start,end,gene)
+  }
+}
 
 object Region {
   def fromString(s: String) = {
     val arr = s.split("\t")
-    Region(arr(0), arr(1).toInt, arr(2).toInt)
+    Region(arr(0), arr(1).toInt, arr(2).toInt, arr(3))
   }
 }
 

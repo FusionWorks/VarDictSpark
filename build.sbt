@@ -13,15 +13,22 @@ lazy val pr = (project in file(".")).enablePlugins(PlayScala)
 */
 scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8")
 
-libraryDependencies ++= adamDependencies ++ sparkDependencies
+javacOptions ++= Seq("-source", "1.8", "-target", "1.8", "-Xlint")
 
-lazy val adamDependencies = Seq("org.bdgenomics.adam" % "adam-core" % "0.16.0" % "provided")
+
+libraryDependencies ++= adamDependencies ++ sparkDependencies ++ varDictDependencies
+
+lazy val adamDependencies = Seq("org.bdgenomics.adam" %% "adam-core" % "0.19.0"/* % "provided"*/)
+
+lazy val varDictDependencies = Seq(
+  "com.edropple.jregex" % "jregex" % "1.2_01"
+)
 
 
 lazy val sparkDependencies = {
   val sparkV = "1.6.0"
   Seq(
-    "org.apache.spark" %% "spark-core" % sparkV/* % "provided"*/,
+    "org.apache.spark" %% "spark-core" % sparkV /* % "provided"*/ ,
     "org.apache.spark" %% "spark-sql" % sparkV /*% "provided"*/
   )
 }
@@ -34,6 +41,6 @@ assemblyMergeStrategy in assembly := {
   case _ => MergeStrategy.first
 }
 
-run in Compile <<= Defaults.runTask(fullClasspath in Compile, mainClass in (Compile, run), runner in (Compile, run))
+run in Compile <<= Defaults.runTask(fullClasspath in Compile, mainClass in(Compile, run), runner in(Compile, run))
 
 test in assembly := {}
