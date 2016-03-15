@@ -23,10 +23,11 @@ object Main extends App {
     "/home/ubuntu/work/data/chr20_dataset/raw/dedupped_20.bed"
   )
   val conf = VDMain.getConfigurationFromArgs(localArgs)
-  val basePath = "/home/ubuntu/work/data/chr20_dataset/raw"
-  val bamPath = s"$basePath/dedupped_20.bam"
-  val bedPath = s"$basePath/sample_dedupped_20_2.bed"
-  val fastaPath = s"$basePath/human_b37_20.fasta"
+  val basePath = "/user/biodtfs"
+
+  val bamPath = s"$basePath/d73c91e0-49e6-489e-956c-8298c8454dc6.bam"
+  val bedPath = s"$basePath/d30b7065-f1f8-4a48-8884-ba6e7ec38c78.bed"
+  val fastaPath = s"$basePath/41482cd9-f610-4ab6-a937-7ac31551f2df.fasta"
 
   val regions = VarDictSpark.loadRegions(bedPath)
   val fasta = VarDictSpark.loadFasta(fastaPath).persist(StorageLevel.MEMORY_AND_DISK)
@@ -42,18 +43,19 @@ object Main extends App {
     val f = mapToJavaHashMap(
       VarDictSpark.filterFasta(fasta, region).map(n => n.position -> n.value).collectAsMap()
     )
-    fElems = fElems.union(sc.parallelize(Seq(region -> f))).persist(StorageLevel.MEMORY_AND_DISK)
+    fElems = fElems.union(sc.parallelize(Seq(region -> f)))
 
   }
-  fasta.unpersist()
+  fElems = fElems.persist(StorageLevel.MEMORY_AND_DISK)
+  fasta.unpersist(blocking = false)
 
   regions.toLocalIterator.foreach { region =>
     val b = samRDD.filterSAMRecordRDD(region.start, region.end, region.chr).collect().toList
-    bElems = bElems.union(sc.parallelize(Seq(region -> b))).persist(StorageLevel.MEMORY_AND_DISK)
+    bElems = bElems.union(sc.parallelize(Seq(region -> b)))
 
   }
-
-  samRDD.unpersist()
+  bElems = bElems.persist(StorageLevel.MEMORY_AND_DISK)
+  samRDD.unpersist(blocking = false)
 
   val vdElems = fElems.join(bElems).map(t => VarDictRDDElem(t._1, t._2._1, t._2._2))
 
@@ -65,7 +67,7 @@ object Main extends App {
     VarDict.vardict(e.region.toVDRegion, vars_._2, sample, splice, conf)
   }
 
-  vars.saveAsTextFile("/home/ubuntu/vcf")
+  vars.coalesce(1).saveAsTextFile("/home/ubuntu/vcf")
 
   /*implicit*/ def mapToJavaHashMap[K, V](map: scala.collection.Map[K, V]): util.HashMap[K, V] = {
     new util.HashMap[K, V](map)

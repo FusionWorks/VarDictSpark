@@ -3,7 +3,7 @@ organization := "md.fusionworks"
 
 version := "0.1"
 
-scalaVersion := "2.10.5"
+scalaVersion := "2.10.4"
 
 //uncomment this to use `sbt dependencies`
 /*
@@ -13,7 +13,7 @@ lazy val pr = (project in file(".")).enablePlugins(PlayScala)
 */
 scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8")
 
-javacOptions ++= Seq("-source", "1.8", "-target", "1.8", "-Xlint")
+//javacOptions ++= Seq("-source", "1.8", "-target", "1.8", "-Xlint")
 
 
 libraryDependencies ++= adamDependencies ++ sparkDependencies ++ varDictDependencies
@@ -26,10 +26,10 @@ lazy val varDictDependencies = Seq(
 
 
 lazy val sparkDependencies = {
-  val sparkV = "1.6.0"
+  val sparkV = "1.2.0"
   Seq(
-    "org.apache.spark" %% "spark-core" % sparkV /* % "provided"*/ ,
-    "org.apache.spark" %% "spark-sql" % sparkV /*% "provided"*/
+    "org.apache.spark" %% "spark-core" % sparkV % "provided" ,
+    "org.apache.spark" %% "spark-sql" % sparkV % "provided"
   )
 }
 
