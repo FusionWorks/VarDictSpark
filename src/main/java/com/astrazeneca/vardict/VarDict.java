@@ -363,6 +363,10 @@ public class VarDict {
 //
 //    }
 
+    public static Tuple2<String, String> getSampleNames(Configuration conf) {
+        return getSampleNames(conf.bam.getBamRaw(), conf.sampleName, conf.sampleNameRegexp);
+    }
+
     final static Pattern SAMPLE_PATTERN = Pattern.compile("([^\\/\\._]+).sorted[^\\/]*.bam");
     final static Pattern SAMPLE_PATTERN2 = Pattern.compile("([^\\/]+)[_\\.][^\\/]*bam");
 
@@ -938,9 +942,9 @@ public class VarDict {
      * @param sample sample name
      * @param splice set of strings representing spliced regions
      * @param conf   configuration
-     * @param out    output stream
      */
-    static void vardict(Region region, Map<Integer, Vars> vars, String sample, Set<String> splice, Configuration conf, PrintStream out) {
+    public static List<String> vardict(Region region, Map<Integer, Vars> vars, String sample, Set<String> splice, Configuration conf) {
+        List<String> result = new ArrayList<String>();
         for (int p = region.start; p <= region.end; p++) {
             List<String> vts = new ArrayList<>();
             List<Variant> vrefs = new ArrayList<>();
@@ -950,7 +954,7 @@ public class VarDict {
                 }
                 Variant vref = getVarMaybe(vars, p, ref);
                 if (vref == null) {
-                    out.println(join("\t", sample, region.gene, region.chr, p, p,
+                    result.add(join("\t", sample, region.gene, region.chr, p, p,
                             "", "", 0, 0, 0, 0, 0, 0, "", 0, "0;0", 0, 0, 0, 0, 0, "", 0, 0, 0, 0, 0, 0, "", "", 0, 0,
                             region.chr + ":" + region.start + "-" + region.end, ""
                     ));
@@ -983,7 +987,7 @@ public class VarDict {
                 if ("Complex".equals(vartype)) {
                     adjComplex(vref);
                 }
-                out.println(join("\t", sample, region.gene, region.chr,
+                result.add(join("\t", sample, region.gene, region.chr,
                         vref.sp, vref.ep, vref.refallele, vref.varallele,
                         vref.tcov,
                         vref.cov,
@@ -1013,11 +1017,12 @@ public class VarDict {
                         region.chr + ":" + region.start + "-" + region.end, vartype
                 ));
                 if (conf.debug) {
-                    out.println("\t" + vref.DEBUG);
+                    result.add("\t" + vref.DEBUG);
                 }
             }
 
         }
+        return result;
     }
 
     private static String[] retriveSubSeq(String fasta, String chr, int start, int end) throws IOException {
@@ -1366,7 +1371,7 @@ public class VarDict {
      * @return Tuple of (noninsertion variant  structure, insertion variant structure, coverage, maxmimum read length)
      * @throws IOException
      */
-    static Tuple4<Map<Integer, Map<String, Variation>>, Map<Integer, Map<String, Variation>>, Map<Integer, Integer>, Integer> parseSAM(Region region, ArrayList<SAMRecord> bam,
+    static Tuple4<Map<Integer, Map<String, Variation>>, Map<Integer, Map<String, Variation>>, Map<Integer, Integer>, Integer> parseSAM(Region region, List<SAMRecord> bam,
                                                                                                                                        Map<String, Integer> chrs, String sample, Set<String> splice, String ampliconBasedCalling, int rlen, Map<Integer, Character> ref, Configuration conf) throws IOException {
 
 //        String[] bams = bam.split(":");
@@ -2530,19 +2535,20 @@ public class VarDict {
     /**
      * Read BAM files and create variant structure
      *
-     * @param region               region of interest
-     * @param bam                  BAM file names (':' delimiter)
-     * @param ref                  part of reference sequence (key - position, value - base)
-     * @param chrs                 map of chromosome lengths
-     * @param SPLICE               set of strings representing spliced regions
-     * @param ampliconBasedCalling string of maximum_distance:minimum_overlap for amplicon based calling
-     * @param Rlen                 maximum read length
-     * @param conf                 VarDict configuration
+     * @param region region of interest
+     * @param bam    BAM file names (':' delimiter)
+     * @param ref    part of reference sequence (key - position, value - base)
+     * @param chrs   map of chromosome lengths
+     * @param SPLICE set of strings representing spliced regions
+     * @param Rlen   maximum read length
+     * @param conf   VarDict configuration
      * @return Tuple of (maxmimum read length, variant structure)
      * @throws IOException
      */
-    public static Tuple2<Integer, Map<Integer, Vars>> toVars(Region region, ArrayList<SAMRecord> bam, Map<Integer, Character> ref,
-                                                             Map<String, Integer> chrs, String sample, Set<String> SPLICE, String ampliconBasedCalling, int Rlen, Configuration conf) throws IOException {
+    public static Tuple2<Integer, Map<Integer, Vars>> toVars(Region region, List<SAMRecord> bam, HashMap<Integer, Character> ref,
+                                                             HashMap<String, Integer> chrs, String sample, Set<String> SPLICE, int Rlen, Configuration conf) throws IOException {
+
+        String ampliconBasedCalling = conf.ampliconBasedCalling;
 
         Tuple4<Map<Integer, Map<String, Variation>>, Map<Integer, Map<String, Variation>>, Map<Integer, Integer>, Integer> parseTpl =
                 parseSAM(region, bam, chrs, sample, SPLICE, ampliconBasedCalling, Rlen, ref, conf);

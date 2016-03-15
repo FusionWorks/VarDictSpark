@@ -15,6 +15,9 @@ object SparkContextFactory {
       case None =>
         val sparkConf = new SparkConf().setAppName("JBrowse-ADAM")
         .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
+        .set("spark.driver.memory", "10g")
+        .set("spark.kryoserializer.buffer.max", "500m")
+        .set("spark.driver.maxResultSize", "8g")
 
         master match {
           case Some(url) => sparkConf.setMaster(url)
