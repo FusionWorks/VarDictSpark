@@ -7,7 +7,6 @@ import htsjdk.samtools.SAMRecord
 import md.fusionworks.vardictspark.spark.SparkContextFactory
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
-import org.apache.spark.storage.StorageLevel
 import org.bdgenomics.adam.rdd.ADAMContext._
 import Implicits._
 
@@ -23,64 +22,41 @@ object Main extends App {
     "/home/ubuntu/work/data/chr20_dataset/raw/dedupped_20.bed"
   )
   val conf = VDMain.getConfigurationFromArgs(localArgs)
-  val basePath = "s3n://fusiongene-na/chr20_dataset/raw"
+  val basePath = "/home/ubuntu/work/data/chr20_dataset/raw"
 
   val bamPath = s"$basePath/dedupped_20.bam"
   val bedPath = s"$basePath/sample_dedupped_20_2.bed"
   val fastaPath = s"$basePath/human_b37_20.fasta"
 
-  val outputPath = "s3n://fusiongene-na/vardict/vcf"
+  val outputPath = "/home/ubuntu/vcf"
 
   val regions = VarDictSpark.loadRegions(bedPath)
-  val fasta = VarDictSpark.loadFasta(fastaPath).persist(StorageLevel.MEMORY_AND_DISK)
-  val sc = VarDictSpark.sc
-  val samRDD = sc.loadSamRecordRDD(bamPath).persist(StorageLevel.MEMORY_AND_DISK)
-  var fElems = sc.parallelize(Seq.empty[(Region, util.HashMap[Integer, Character])])
-  var bElems = sc.parallelize(Seq.empty[(Region, List[SAMRecord])])
+  val fasta = VarDictSpark.loadFasta(fastaPath) //.persist(StorageLevel.MEMORY_AND_DISK)
+
+  val cartesianFasta = regions.cartesian(fasta).filter { case (region, nucl) =>
+    region.chr == nucl.chr &&
+      region.start <= nucl.position &&
+      region.end >= nucl.position
+  }.mapValues(n => n.position -> n.value)
+  val samRDD = VarDictSpark.sc.loadSamRecordRDD(bamPath)
+  val cartesianSam = regions.cartesian(samRDD).filter { case (region, samRec) =>
+    region.chr == samRec.getContig &&
+      samRec.getStart < region.end &&
+      samRec.getEnd > region.start
+  }
+
+  val vdElems = cartesianFasta.cogroup(cartesianSam)
   val chrs = mapToJavaHashMap(samRDD.first()
     .getHeader.getSequenceDictionary.getSequences
     .map(s => s.getSequenceName -> s.getSequenceLength.asInstanceOf[Integer]).toMap)
 
-  regions.toLocalIterator.foreach { region =>
-    val f = mapToJavaHashMap(
-      VarDictSpark.filterFasta(fasta, region).map(n => n.position -> n.value).collectAsMap()
-    )
-    fElems = fElems.union(sc.parallelize(Seq(region -> f)))
-
-  }
-//  fElems = fElems.persist(StorageLevel.MEMORY_AND_DISK)
-  fasta.unpersist(blocking = false)
-
-  regions.toLocalIterator.foreach { region =>
-    val b = samRDD.filterSAMRecordRDD(region.start, region.end, region.chr).collect().toList
-    bElems = bElems.union(sc.parallelize(Seq(region -> b)))
-
-  }
-//  bElems = bElems.persist(StorageLevel.MEMORY_AND_DISK)
-  samRDD.unpersist(blocking = false)
-
-  val vdElems = fElems.join(bElems).map(t => VarDictRDDElem(t._1, t._2._1, t._2._2)).persist(StorageLevel.MEMORY_AND_DISK)
-
-  println("counting vdElems")
-  println("counting vdElems")
-  println("counting vdElems")
-  println("counting vdElems")
-  println(s"count = ${vdElems.count()}")
-
-  val vars = vdElems.flatMap { e =>
+  val vars = vdElems.flatMap { case (region,(ref,bam)) =>
 
     val splice: java.util.Set[String] = new java.util.HashSet[String]
     val sample = VarDict.getSampleNames(conf)._1
-    val vars_ = VarDict.toVars(e.region.toVDRegion, e.bam, e.ref, chrs, sample, splice, 0, conf)
-    VarDict.vardict(e.region.toVDRegion, vars_._2, sample, splice, conf)
-  }.persist(StorageLevel.MEMORY_AND_DISK)
-
-  println("counting vars")
-  println("counting vars")
-  println("counting vars")
-  println("counting vars")
-  println(s"count = ${vars.count()}")
-  println("saving")
+    val vars_ = VarDict.toVars(region.toVDRegion, bam.toList, mapToJavaHashMap(ref.toMap), chrs, sample, splice, 0, conf)
+    VarDict.vardict(region.toVDRegion, vars_._2, sample, splice, conf)
+  }
 
   vars.coalesce(1).saveAsTextFile(outputPath)
 
@@ -94,7 +70,7 @@ case class VarDictRDDElem(region: Region, ref: util.HashMap[Integer, Character],
 
 object VarDictSpark {
 
-  val sc: SparkContext = SparkContextFactory.getSparkContext()
+  val sc: SparkContext = SparkContextFactory.getSparkContext(Some("local[*]"))
 
   def loadRegions(path: String): RDD[Region] = {
     sc.textFile(path).map(Region.fromString)
