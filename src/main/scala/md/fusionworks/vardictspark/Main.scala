@@ -23,11 +23,13 @@ object Main extends App {
     "/home/ubuntu/work/data/chr20_dataset/raw/dedupped_20.bed"
   )
   val conf = VDMain.getConfigurationFromArgs(localArgs)
-  val basePath = "/user/biodtfs"
+  val basePath = "s3n://fusiongene-na/chr20_dataset/raw"
 
-  val bamPath = s"$basePath/d73c91e0-49e6-489e-956c-8298c8454dc6.bam"
-  val bedPath = s"$basePath/d30b7065-f1f8-4a48-8884-ba6e7ec38c78.bed"
-  val fastaPath = s"$basePath/41482cd9-f610-4ab6-a937-7ac31551f2df.fasta"
+  val bamPath = s"$basePath/dedupped_20.bam"
+  val bedPath = s"$basePath/sample_dedupped_20_2.bed"
+  val fastaPath = s"$basePath/human_b37_20.fasta"
+
+  val outputPath = "s3n://fusiongene-na/vardict/vcf"
 
   val regions = VarDictSpark.loadRegions(bedPath)
   val fasta = VarDictSpark.loadFasta(fastaPath).persist(StorageLevel.MEMORY_AND_DISK)
@@ -46,7 +48,7 @@ object Main extends App {
     fElems = fElems.union(sc.parallelize(Seq(region -> f)))
 
   }
-  fElems = fElems.persist(StorageLevel.MEMORY_AND_DISK)
+//  fElems = fElems.persist(StorageLevel.MEMORY_AND_DISK)
   fasta.unpersist(blocking = false)
 
   regions.toLocalIterator.foreach { region =>
@@ -54,10 +56,16 @@ object Main extends App {
     bElems = bElems.union(sc.parallelize(Seq(region -> b)))
 
   }
-  bElems = bElems.persist(StorageLevel.MEMORY_AND_DISK)
+//  bElems = bElems.persist(StorageLevel.MEMORY_AND_DISK)
   samRDD.unpersist(blocking = false)
 
-  val vdElems = fElems.join(bElems).map(t => VarDictRDDElem(t._1, t._2._1, t._2._2))
+  val vdElems = fElems.join(bElems).map(t => VarDictRDDElem(t._1, t._2._1, t._2._2)).persist(StorageLevel.MEMORY_AND_DISK)
+
+  println("counting vdElems")
+  println("counting vdElems")
+  println("counting vdElems")
+  println("counting vdElems")
+  println(s"count = ${vdElems.count()}")
 
   val vars = vdElems.flatMap { e =>
 
@@ -65,9 +73,16 @@ object Main extends App {
     val sample = VarDict.getSampleNames(conf)._1
     val vars_ = VarDict.toVars(e.region.toVDRegion, e.bam, e.ref, chrs, sample, splice, 0, conf)
     VarDict.vardict(e.region.toVDRegion, vars_._2, sample, splice, conf)
-  }
+  }.persist(StorageLevel.MEMORY_AND_DISK)
 
-  vars.coalesce(1).saveAsTextFile("/home/ubuntu/vcf")
+  println("counting vars")
+  println("counting vars")
+  println("counting vars")
+  println("counting vars")
+  println(s"count = ${vars.count()}")
+  println("saving")
+
+  vars.coalesce(1).saveAsTextFile(outputPath)
 
   /*implicit*/ def mapToJavaHashMap[K, V](map: scala.collection.Map[K, V]): util.HashMap[K, V] = {
     new util.HashMap[K, V](map)
@@ -79,7 +94,7 @@ case class VarDictRDDElem(region: Region, ref: util.HashMap[Integer, Character],
 
 object VarDictSpark {
 
-  val sc: SparkContext = SparkContextFactory.getSparkContext(Some("local[*]"))
+  val sc: SparkContext = SparkContextFactory.getSparkContext()
 
   def loadRegions(path: String): RDD[Region] = {
     sc.textFile(path).map(Region.fromString)

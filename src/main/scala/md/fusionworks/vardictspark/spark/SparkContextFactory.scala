@@ -22,11 +22,6 @@ object SparkContextFactory {
         master match {
           case Some(url) => sparkConf.setMaster(url)
           case None =>
-            val jbConf = ConfigLoader.getJBrowseConf
-            if (jbConf.hasPath("spark.masterUrl")) {
-              val masterUrl = jbConf.getString("spark.masterUrl")
-              sparkConf.setMaster(masterUrl)
-            }
         }
 
         sparkContext = Some(new SparkContext(sparkConf))
