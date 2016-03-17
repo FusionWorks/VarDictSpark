@@ -1,6 +1,5 @@
 package md.fusionworks.vardictspark.spark
 
-import md.fusionworks.vardictspark.config.ConfigLoader
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.{SparkConf, SparkContext}
 

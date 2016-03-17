@@ -1,10 +1,12 @@
 package md.fusionworks.vardictspark
 
 import java.util
+import java.util.UUID
 
 import com.astrazeneca.vardict.{Main => VDMain, Configuration, VarDict}
 import htsjdk.samtools.SAMRecord
 import md.fusionworks.vardictspark.spark.SparkContextFactory
+import org.apache.hadoop.fs.{FileUtil, Path, FileSystem}
 import org.apache.spark.SparkContext
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.rdd.RDD
@@ -16,6 +18,7 @@ import Implicits._
   * Created by antonstamov on 3/13/16.
   */
 object Main extends App {
+  System.setProperty("HADOOP_USER_NAME", "hdfs")
   val localArgs = Array(
     "-c", "1", "-S", "2", "-E", "3", "-s", "2", "-e", "3", "-g", "4",
     "-G", "/home/ubuntu/work/data/chr20_dataset/raw/human_b37_20.fasta",
@@ -25,13 +28,17 @@ object Main extends App {
   val conf = VarDictSpark.sc.broadcast(
     VDMain.getConfigurationFromArgs(localArgs)
   )
-  val basePath = "s3n://fusiongene-na/chr20_dataset/raw"
+  val basePath = "/user/biodtfs"
 
-  val bamPath = s"$basePath/dedupped_20.bam"
-  val bedPath = s"$basePath/sample_dedupped_20_2.bed"
-  val fastaPath = s"$basePath/human_b37_20.fasta"
+  val bamPath = s"$basePath/d73c91e0-49e6-489e-956c-8298c8454dc6.bam"
+  val bedPath = s"$basePath/d30b7065-f1f8-4a48-8884-ba6e7ec38c78.bed"
+  val fastaPath = s"$basePath/41482cd9-f610-4ab6-a937-7ac31551f2df.fasta"
 
-  val outputPath = "s3n://fusiongene-na/vardict/vcf"
+  val outputPath = s"$basePath/vardict.vcf"
+  val tmpPath = s"${outputPath}_tmp-${UUID.randomUUID().toString}"
+  val hadoopConf = VarDictSpark.sc.hadoopConfiguration
+  val fs = FileSystem.get(hadoopConf)
+  fs.delete(new Path(outputPath), true)
 
   val regions = VarDictSpark.loadRegions(bedPath)
   val fasta = VarDictSpark.loadFasta(fastaPath) //.persist(StorageLevel.MEMORY_AND_DISK)
@@ -51,15 +58,21 @@ object Main extends App {
   val vdElems = cartesianFasta.cogroup(cartesianSam)
 
 
-
   val vars = computeVars(vdElems, conf)
 
-  vars.coalesce(1).saveAsTextFile(outputPath)
+  vars.saveAsTextFile(tmpPath)
+
+  FileUtil.copyMerge(fs, tmpPath, fs, outputPath, true, hadoopConf, null)
+  fs.delete(tmpPath, true)
+
+  implicit def str2Path(path:String):Path = new Path(path)
 
   def computeVars(rDD: RDD[(Region, (Iterable[(Integer, Character)], Iterable[SAMRecord]))], conf: Broadcast[Configuration]) = {
-    val chrs = mapToJavaHashMap(samRDD.first()
-      .getHeader.getSequenceDictionary.getSequences
-      .map(s => s.getSequenceName -> s.getSequenceLength.asInstanceOf[Integer]).toMap)
+    val chrs = mapToJavaHashMap(
+      samRDD.first()
+        .getHeader.getSequenceDictionary.getSequences
+        .map(s => s.getSequenceName -> s.getSequenceLength.asInstanceOf[Integer]).toMap
+    )
 
     rDD.flatMap { case (region, (ref, bam)) =>
       val sample = VarDict.getSampleNames(conf.value)._1
@@ -70,7 +83,7 @@ object Main extends App {
     }
   }
 
-  /*implicit*/ def mapToJavaHashMap[K, V](map: scala.collection.Map[K, V]): util.HashMap[K, V] = {
+  def mapToJavaHashMap[K, V](map: scala.collection.Map[K, V]): util.HashMap[K, V] = {
     new util.HashMap[K, V](map)
   }
 

@@ -26,7 +26,7 @@ lazy val varDictDependencies = Seq(
 
 
 lazy val sparkDependencies = {
-  val sparkV = "1.6.0"
+  val sparkV = "1.5.0"
   Seq(
     "org.apache.spark" %% "spark-core" % sparkV % "provided" ,
     "org.apache.spark" %% "spark-sql" % sparkV % "provided"
