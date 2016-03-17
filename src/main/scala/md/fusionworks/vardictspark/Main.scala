@@ -35,8 +35,8 @@ object Main extends App {
 
   val cartesianFasta = regions.cartesian(fasta).filter { case (region, nucl) =>
     region.chr == nucl.chr &&
-      region.start <= nucl.position &&
-      region.end >= nucl.position
+      region.start - 700 <= nucl.position &&
+      region.end + 700 >= nucl.position
   }.mapValues(n => n.position -> n.value)
   val samRDD = VarDictSpark.sc.loadSamRecordRDD(bamPath)
   val cartesianSam = regions.cartesian(samRDD).filter { case (region, samRec) =>
@@ -50,7 +50,7 @@ object Main extends App {
     .getHeader.getSequenceDictionary.getSequences
     .map(s => s.getSequenceName -> s.getSequenceLength.asInstanceOf[Integer]).toMap)
 
-  val vars = vdElems.flatMap { case (region,(ref,bam)) =>
+  val vars = vdElems.flatMap { case (region, (ref, bam)) =>
 
     val splice: java.util.Set[String] = new java.util.HashSet[String]
     val sample = VarDict.getSampleNames(conf)._1
