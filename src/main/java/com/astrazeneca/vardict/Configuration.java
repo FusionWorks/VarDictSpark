@@ -4,7 +4,9 @@ import htsjdk.samtools.ValidationStringency;
 
 import com.astrazeneca.vardict.VarDict.BedRowFormat;
 
-public class Configuration {
+import java.io.Serializable;
+
+public class Configuration  implements Serializable{
     /**
      * Print a header row decribing columns
      */

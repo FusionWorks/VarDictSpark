@@ -2,10 +2,11 @@ package md.fusionworks.vardictspark
 
 import java.util
 
-import com.astrazeneca.vardict.{Main => VDMain, VarDict}
+import com.astrazeneca.vardict.{Main => VDMain, Configuration, VarDict}
 import htsjdk.samtools.SAMRecord
 import md.fusionworks.vardictspark.spark.SparkContextFactory
 import org.apache.spark.SparkContext
+import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.rdd.ADAMContext._
 import Implicits._
@@ -21,14 +22,16 @@ object Main extends App {
     "-b", "/home/ubuntu/work/data/chr20_dataset/raw/dedupped_20.bam",
     "/home/ubuntu/work/data/chr20_dataset/raw/dedupped_20.bed"
   )
-  val conf = VDMain.getConfigurationFromArgs(localArgs)
-  val basePath = "/home/ubuntu/work/data/chr20_dataset/raw"
+  val conf = VarDictSpark.sc.broadcast(
+    VDMain.getConfigurationFromArgs(localArgs)
+  )
+  val basePath = "s3n://fusiongene-na/chr20_dataset/raw"
 
   val bamPath = s"$basePath/dedupped_20.bam"
   val bedPath = s"$basePath/sample_dedupped_20_2.bed"
   val fastaPath = s"$basePath/human_b37_20.fasta"
 
-  val outputPath = "/home/ubuntu/vcf"
+  val outputPath = "s3n://fusiongene-na/vardict/vcf"
 
   val regions = VarDictSpark.loadRegions(bedPath)
   val fasta = VarDictSpark.loadFasta(fastaPath) //.persist(StorageLevel.MEMORY_AND_DISK)
@@ -46,19 +49,26 @@ object Main extends App {
   }
 
   val vdElems = cartesianFasta.cogroup(cartesianSam)
-  val chrs = mapToJavaHashMap(samRDD.first()
-    .getHeader.getSequenceDictionary.getSequences
-    .map(s => s.getSequenceName -> s.getSequenceLength.asInstanceOf[Integer]).toMap)
 
-  val vars = vdElems.flatMap { case (region, (ref, bam)) =>
 
-    val splice: java.util.Set[String] = new java.util.HashSet[String]
-    val sample = VarDict.getSampleNames(conf)._1
-    val vars_ = VarDict.toVars(region.toVDRegion, bam.toList, mapToJavaHashMap(ref.toMap), chrs, sample, splice, 0, conf)
-    VarDict.vardict(region.toVDRegion, vars_._2, sample, splice, conf)
-  }
+
+  val vars = computeVars(vdElems, conf)
 
   vars.coalesce(1).saveAsTextFile(outputPath)
+
+  def computeVars(rDD: RDD[(Region, (Iterable[(Integer, Character)], Iterable[SAMRecord]))], conf: Broadcast[Configuration]) = {
+    val chrs = mapToJavaHashMap(samRDD.first()
+      .getHeader.getSequenceDictionary.getSequences
+      .map(s => s.getSequenceName -> s.getSequenceLength.asInstanceOf[Integer]).toMap)
+
+    rDD.flatMap { case (region, (ref, bam)) =>
+      val sample = VarDict.getSampleNames(conf.value)._1
+
+      val splice: java.util.Set[String] = new java.util.HashSet[String]
+      val vars_ = VarDict.toVars(region.toVDRegion, bam.toList, mapToJavaHashMap(ref.toMap), chrs, sample, splice, 0, conf.value)
+      VarDict.vardict(region.toVDRegion, vars_._2, sample, splice, conf.value)
+    }
+  }
 
   /*implicit*/ def mapToJavaHashMap[K, V](map: scala.collection.Map[K, V]): util.HashMap[K, V] = {
     new util.HashMap[K, V](map)
@@ -70,14 +80,12 @@ case class VarDictRDDElem(region: Region, ref: util.HashMap[Integer, Character],
 
 object VarDictSpark {
 
-  val sc: SparkContext = SparkContextFactory.getSparkContext(Some("local[*]"))
+  val sc: SparkContext = SparkContextFactory.getSparkContext(/*Some("local[*]")*/)
 
   def loadRegions(path: String): RDD[Region] = {
     sc.textFile(path).map(Region.fromString)
   }
 
-
-  def filterBam(bam: RDD[SAMRecord], region: Region) = ???
 
   def loadFasta(path: String): RDD[Nucleotide] = {
     sc.loadSequence(path)
