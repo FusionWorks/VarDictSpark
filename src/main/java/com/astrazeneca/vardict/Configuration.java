@@ -49,6 +49,10 @@ public class Configuration  implements Serializable{
      */
     BamNames bam;
     /**
+     * The output vcf file
+     */
+    String outputVcf;
+    /**
      * For downsampling fraction
      */
     Double downsampling;
@@ -161,6 +165,22 @@ public class Configuration  implements Serializable{
 
     public boolean isZeroBasedDefined() {
         return zeroBased != null;
+    }
+
+    public String getFasta() {
+        return fasta;
+    }
+
+    public String getBed() {
+        return bed;
+    }
+
+    public String getBam() {
+        return bam.getBamRaw();
+    }
+
+    public String getOutputVcf() {
+        return outputVcf;
     }
 
     public static class BamNames {

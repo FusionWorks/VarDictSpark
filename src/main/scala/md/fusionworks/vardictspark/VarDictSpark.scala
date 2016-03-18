@@ -3,51 +3,57 @@ package md.fusionworks.vardictspark
 import java.util
 import java.util.UUID
 
-import com.astrazeneca.vardict.{Main => VDMain, Configuration, VarDict}
+import com.astrazeneca.vardict.{Configuration, VarDict, Main => VDMain}
 import htsjdk.samtools.SAMRecord
+import md.fusionworks.vardictspark.Implicits._
 import md.fusionworks.vardictspark.spark.SparkContextFactory
-import org.apache.hadoop.fs.{FileUtil, Path, FileSystem}
-import org.apache.spark.SparkContext
+import org.apache.hadoop.fs.{FileSystem, FileUtil, Path}
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.rdd.ADAMContext._
-import Implicits._
 
 
 /**
   * Created by antonstamov on 3/13/16.
   */
-object Main extends App {
+
+
+object VarDictSpark extends App {
+
   System.setProperty("HADOOP_USER_NAME", "hdfs")
+
   val localArgs = Array(
     "-c", "1", "-S", "2", "-E", "3", "-s", "2", "-e", "3", "-g", "4",
     "-G", "/home/ubuntu/work/data/chr20_dataset/raw/human_b37_20.fasta",
     "-b", "/home/ubuntu/work/data/chr20_dataset/raw/dedupped_20.bam",
     "/home/ubuntu/work/data/chr20_dataset/raw/dedupped_20.bed"
   )
+
+  val sc = SparkContextFactory.getSparkContext(Some("local[*]"))
+
   val conf = VarDictSpark.sc.broadcast(
-    VDMain.getConfigurationFromArgs(localArgs)
+    VDMain.getConfigurationFromArgs(args)
   )
-  val basePath = "/user/biodtfs"
 
-  val bamPath = s"$basePath/d73c91e0-49e6-489e-956c-8298c8454dc6.bam"
-  val bedPath = s"$basePath/d30b7065-f1f8-4a48-8884-ba6e7ec38c78.bed"
-  val fastaPath = s"$basePath/41482cd9-f610-4ab6-a937-7ac31551f2df.fasta"
-
-  val outputPath = s"$basePath/vardict.vcf"
+  val bedPath = conf.value.getBed
+  val bamPath = conf.value.getBam
+  val fastaPath = conf.value.getFasta
+  val outputPath = conf.value.getOutputVcf
   val tmpPath = s"${outputPath}_tmp-${UUID.randomUUID().toString}"
-  val hadoopConf = VarDictSpark.sc.hadoopConfiguration
+
+  val hadoopConf = sc.hadoopConfiguration
   val fs = FileSystem.get(hadoopConf)
   fs.delete(new Path(outputPath), true)
 
   val regions = VarDictSpark.loadRegions(bedPath)
-  val fasta = VarDictSpark.loadFasta(fastaPath) //.persist(StorageLevel.MEMORY_AND_DISK)
 
+  val fasta = VarDictSpark.loadFasta(fastaPath)
   val cartesianFasta = regions.cartesian(fasta).filter { case (region, nucl) =>
     region.chr == nucl.chr &&
       region.start - 700 <= nucl.position &&
       region.end + 700 >= nucl.position
   }.mapValues(n => n.position -> n.value)
+
   val samRDD = VarDictSpark.sc.loadSamRecordRDD(bamPath)
   val cartesianSam = regions.cartesian(samRDD).filter { case (region, samRec) =>
     region.chr == samRec.getContig &&
@@ -65,7 +71,7 @@ object Main extends App {
   FileUtil.copyMerge(fs, tmpPath, fs, outputPath, true, hadoopConf, null)
   fs.delete(tmpPath, true)
 
-  implicit def str2Path(path:String):Path = new Path(path)
+  implicit def str2Path(path: String): Path = new Path(path)
 
   def computeVars(rDD: RDD[(Region, (Iterable[(Integer, Character)], Iterable[SAMRecord]))], conf: Broadcast[Configuration]) = {
     val chrs = mapToJavaHashMap(
@@ -86,14 +92,6 @@ object Main extends App {
   def mapToJavaHashMap[K, V](map: scala.collection.Map[K, V]): util.HashMap[K, V] = {
     new util.HashMap[K, V](map)
   }
-
-}
-
-case class VarDictRDDElem(region: Region, ref: util.HashMap[Integer, Character], bam: List[SAMRecord])
-
-object VarDictSpark {
-
-  val sc: SparkContext = SparkContextFactory.getSparkContext(/*Some("local[*]")*/)
 
   def loadRegions(path: String): RDD[Region] = {
     sc.textFile(path).map(Region.fromString)
@@ -128,8 +126,10 @@ case class Region(chr: String, start: Int, end: Int, gene: String /*, iStart: In
 object Region {
   def fromString(s: String) = {
     val arr = s.split("\t")
-    Region(arr(0), arr(1).toInt, arr(2).toInt, arr(3))
+    Region(arr(0), arr(1).toInt, arr(2).toInt, arr.lift(3).getOrElse(""))
   }
 }
+
+case class VarDictRDDElem(region: Region, ref: util.HashMap[Integer, Character], bam: List[SAMRecord])
 
 case class Nucleotide(chr: String, position: Integer, value: Character)

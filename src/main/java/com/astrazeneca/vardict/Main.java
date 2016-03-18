@@ -70,6 +70,8 @@ public class Main {
         conf.performLocalRealignment = 1 == getIntValue(cmd, "k", 1);
         conf.fasta = cmd.getOptionValue("G", "/ngs/reference_data/genomes/Hsapiens/hg19/seq/hg19.fa");
 
+        conf.outputVcf = cmd.getOptionValue("outputVcf");
+
         conf.regionOfInterest = cmd.getOptionValue("R");
         conf.delimiter = cmd.getOptionValue("d", "\t");
         conf.sampleName = cmd.getOptionValue("N");
@@ -266,6 +268,13 @@ public class Main {
                 .withType(String.class)
                 .isRequired(true)
                 .create('b'));
+
+        options.addOption(OptionBuilder.withArgName("string")
+                .hasArg(true)
+                .withDescription("The output Vcf file")
+                .withType(String.class)
+                .isRequired(true)
+                .create("outputVcf"));
 
         options.addOption(OptionBuilder.withArgName("INT")
                 .hasArg(true)
