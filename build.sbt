@@ -18,7 +18,7 @@ scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8")
 
 libraryDependencies ++= adamDependencies ++ sparkDependencies ++ varDictDependencies
 
-lazy val adamDependencies = Seq("org.bdgenomics.adam" %% "adam-core" % "0.19.0"/* % "provided"*/)
+lazy val adamDependencies = Seq("org.bdgenomics.adam" %% "adam-core" % "0.19.0" /*% "provided"*/)
 
 lazy val varDictDependencies = Seq(
   "com.edropple.jregex" % "jregex" % "1.2_01"
@@ -28,8 +28,7 @@ lazy val varDictDependencies = Seq(
 lazy val sparkDependencies = {
   val sparkV = "1.5.0"
   Seq(
-    "org.apache.spark" %% "spark-core" % sparkV/* % "provided"*/ ,
-    "org.apache.spark" %% "spark-sql" % sparkV/* % "provided"*/
+    "org.apache.spark" %% "spark-core" % sparkV % "provided"
   )
 }
 
