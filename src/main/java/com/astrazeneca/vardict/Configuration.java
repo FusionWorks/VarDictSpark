@@ -4,7 +4,9 @@ import htsjdk.samtools.ValidationStringency;
 
 import com.astrazeneca.vardict.VarDict.BedRowFormat;
 
-public class Configuration {
+import java.io.Serializable;
+
+public class Configuration  implements Serializable{
     /**
      * Print a header row decribing columns
      */
@@ -46,6 +48,10 @@ public class Configuration {
      * The indexed BAM file name(s)
      */
     BamNames bam;
+    /**
+     * The output vcf file
+     */
+    String outputVcf;
     /**
      * For downsampling fraction
      */
@@ -159,6 +165,22 @@ public class Configuration {
 
     public boolean isZeroBasedDefined() {
         return zeroBased != null;
+    }
+
+    public String getFasta() {
+        return fasta;
+    }
+
+    public String getBed() {
+        return bed;
+    }
+
+    public String getBam() {
+        return bam.getBamRaw();
+    }
+
+    public String getOutputVcf() {
+        return outputVcf;
     }
 
     public static class BamNames {

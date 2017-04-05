@@ -9,6 +9,7 @@ import static java.lang.Math.abs;
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 import static java.util.Collections.singletonMap;
+
 import htsjdk.samtools.*;
 import htsjdk.samtools.reference.IndexedFastaSequenceFile;
 import htsjdk.samtools.reference.ReferenceSequence;
@@ -50,7 +51,7 @@ public class VarDict {
 
         if (conf.regionOfInterest != null) {
             Region region = buildRegion(conf.regionOfInterest, conf.numberNucleotideToExtend, chrs, conf.isZeroBasedDefined() ? conf.zeroBased : false);
-            nonAmpVardict(singletonList(singletonList(region)), chrs, conf.ampliconBasedCalling, sample, samplem, conf);
+//            nonAmpVardict(singletonList(singletonList(region)), chrs, conf.ampliconBasedCalling, sample, samplem, conf);
         } else {
             Tuple3<String, Boolean, List<String>> tpl = readBedFile(conf);
             String ampliconBasedCalling = tpl._1;
@@ -59,19 +60,20 @@ public class VarDict {
 
             if (ampliconBasedCalling != null) {
                 List<List<Region>> segs = toRegions(segraw, chrs, zeroBased != null ? zeroBased : false, conf.delimiter);
-                if (conf.threads == 1)
-                    ampVardictNotParallel(segs, chrs, ampliconBasedCalling, conf.bam.getBam1(), sample, conf);
-                else
-                    ampVardictParallel(segs, chrs, ampliconBasedCalling, conf.bam.getBam1(), sample, conf);
+//                if (conf.threads == 1)
+//                    ampVardictNotParallel(segs, chrs, ampliconBasedCalling, conf.bam.getBam1(), sample, conf);
+//                else
+//                    ampVardictParallel(segs, chrs, ampliconBasedCalling, conf.bam.getBam1(), sample, conf);
             } else {
                 List<List<Region>> regions = toRegions(segraw, chrs, zeroBased, conf);
-                nonAmpVardict(regions, chrs, null, sample, samplem, conf);
+//                nonAmpVardict(regions, chrs, null, sample, samplem, conf);
             }
         }
     }
 
     /**
      * Read map of chromosome lengths
+     *
      * @param bam BAM file name
      * @return Map of chromosome lengths. Key - chromosome name, value - length
      * @throws IOException
@@ -242,123 +244,127 @@ public class VarDict {
         return tuple(a, zeroBased, segraw);
     }
 
-    private static void nonAmpVardict(List<List<Region>> segs, Map<String, Integer> chrs, String ampliconBasedCalling, String sample, String samplem, Configuration conf) throws IOException {
+//    private static void nonAmpVardict(List<List<Region>> segs, Map<String, Integer> chrs, String ampliconBasedCalling, String sample, String samplem, Configuration conf) throws IOException {
+//
+//        if (conf.bam.hasBam2()) {
+//            Tuple2<String, String> stpl = getSampleNames(sample, samplem, conf.bam.getBam1(), conf.bam.getBam2(), conf.sampleName, conf.sampleNameRegexp);
+//            sample = stpl._1;
+//            samplem = stpl._2;
+//            if (conf.threads == 1)
+//                somaticNotParallel(segs, chrs, ampliconBasedCalling, sample, samplem, conf);
+//            else
+//                somaticParallel(segs, chrs, ampliconBasedCalling, sample, samplem, conf);
+//        } else {
+//            if (conf.threads == 1)
+//                vardictNotParallel(segs, chrs, ampliconBasedCalling, sample, conf);
+//            else
+//                vardictParallel(segs, chrs, ampliconBasedCalling, sample, conf);
+//        }
+//    }
 
-        if (conf.bam.hasBam2()) {
-            Tuple2<String, String> stpl = getSampleNames(sample, samplem, conf.bam.getBam1(), conf.bam.getBam2(), conf.sampleName, conf.sampleNameRegexp);
-            sample = stpl._1;
-            samplem = stpl._2;
-            if (conf.threads == 1)
-                somaticNotParallel(segs, chrs, ampliconBasedCalling, sample, samplem, conf);
-            else
-                somaticParallel(segs, chrs, ampliconBasedCalling, sample, samplem, conf);
-        } else {
-            if (conf.threads == 1)
-                vardictNotParallel(segs, chrs, ampliconBasedCalling, sample, conf);
-            else
-                vardictParallel(segs, chrs, ampliconBasedCalling, sample, conf);
-        }
-    }
+//    private static void vardictParallel(final List<List<Region>> segs, final Map<String, Integer> chrs, final String ampliconBasedCalling, final String sample, final Configuration conf) throws IOException {
+//        final ExecutorService executor = Executors.newFixedThreadPool(conf.threads);
+//        final BlockingQueue<Future<OutputStream>> toPrint = new LinkedBlockingQueue<>(10);
+//        executor.submit(new Runnable() {
+//
+//            @Override
+//            public void run() {
+//                try {
+//                    for (List<Region> list : segs) {
+//                        for (Region region : list) {
+//                            toPrint.put(executor.submit(new VardictWorker(region, chrs, new HashSet<String>(), ampliconBasedCalling, sample, conf)));
+//                        }
+//                    }
+//                    toPrint.put(NULL_FUTURE);
+//                } catch (InterruptedException e) {
+//                    e.printStackTrace();
+//                }
+//            }
+//        });
+//
+//        try {
+//            while (true) {
+//                Future<OutputStream> wrk = toPrint.take();
+//                if (wrk == NULL_FUTURE) {
+//                    break;
+//                }
+//                System.out.print(wrk.get());
+//            }
+//        } catch (InterruptedException | ExecutionException e) {
+//            e.printStackTrace();
+//        }
+//
+//        executor.shutdown();
+//
+//    }
 
-    private static void vardictParallel(final List<List<Region>> segs, final Map<String, Integer> chrs, final String ampliconBasedCalling, final String sample, final Configuration conf) throws IOException {
-        final ExecutorService executor = Executors.newFixedThreadPool(conf.threads);
-        final BlockingQueue<Future<OutputStream>> toPrint = new LinkedBlockingQueue<>(10);
-        executor.submit(new Runnable() {
+//    private static void vardictNotParallel(final List<List<Region>> segs, final Map<String, Integer> chrs, final String ampliconBasedCalling, final String sample, final Configuration conf) throws IOException {
+//        for (List<Region> list : segs) {
+//            for (Region region : list) {
+//                Map<Integer, Character> ref = getREF(region, chrs, conf.fasta, conf.numberNucleotideToExtend);
+//                final Set<String> splice = new HashSet<>();
+//                Tuple2<Integer, Map<Integer, Vars>> tpl = toVars(region, conf.bam.getBam1(), ref, chrs, sample, splice, ampliconBasedCalling, 0, conf);
+//                vardict(region, tpl._2, sample, splice, conf, System.out);
+//            }
+//        }
+//    }
 
-            @Override
-            public void run() {
-                try {
-                    for (List<Region> list : segs) {
-                        for (Region region : list) {
-                            toPrint.put(executor.submit(new VardictWorker(region, chrs, new HashSet<String>(), ampliconBasedCalling, sample, conf)));
-                        }
-                    }
-                    toPrint.put(NULL_FUTURE);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-        });
+//    private static void somaticParallel(final List<List<Region>> segs, final Map<String, Integer> chrs, final String ampliconBasedCalling, final String sample, String samplem, final Configuration conf) throws IOException {
+//        final ExecutorService executor = Executors.newFixedThreadPool(conf.threads);
+//        final BlockingQueue<Future<OutputStream>> toSamdict = new LinkedBlockingQueue<>(10);
+//
+//        executor.submit(new Runnable() {
+//
+//            @Override
+//            public void run() {
+//                try {
+//                    for (List<Region> list : segs) {
+//                        for (Region region : list) {
+//                            final Set<String> splice = new ConcurrentHashSet<>();
+//                            Map<Integer, Character> ref = getREF(region, chrs, conf.fasta, conf.numberNucleotideToExtend);
+//                            Future<Tuple2<Integer, Map<Integer, Vars>>> f1 = executor.submit(new ToVarsWorker(region, conf.bam.getBam1(), chrs, sample, splice, ampliconBasedCalling, ref, conf));
+//                            Future<OutputStream> f2 = executor.submit(new SomdictWorker(region, conf.bam.getBam2(), chrs, splice, ampliconBasedCalling, ref, conf, f1, sample));
+//                            toSamdict.put(f2);
+//                        }
+//                    }
+//                    toSamdict.put(NULL_FUTURE);
+//                } catch (IOException | InterruptedException e) {
+//                    e.printStackTrace();
+//                }
+//            }
+//        });
+//
+//        try {
+//            while (true) {
+//                Future<OutputStream> wrk = toSamdict.take();
+//                if (wrk == NULL_FUTURE) {
+//                    break;
+//                }
+//                System.out.print(wrk.get());
+//            }
+//        } catch (InterruptedException | ExecutionException e) {
+//            e.printStackTrace();
+//        }
+//        executor.shutdown();
+//    }
 
-        try {
-            while (true) {
-                Future<OutputStream> wrk = toPrint.take();
-                if (wrk == NULL_FUTURE) {
-                    break;
-                }
-                System.out.print(wrk.get());
-            }
-        } catch (InterruptedException | ExecutionException e) {
-            e.printStackTrace();
-        }
+//    private static void somaticNotParallel(final List<List<Region>> segs,
+//                                           final Map<String, Integer> chrs, final String ampliconBasedCalling,
+//                                           final String sample, String samplem, final Configuration conf) throws IOException {
+//        for (List<Region> list : segs) {
+//            for (Region region : list) {
+//                final Set<String> splice = new ConcurrentHashSet<>();
+//                Map<Integer, Character> ref = getREF(region, chrs, conf.fasta, conf.numberNucleotideToExtend);
+//                Tuple2<Integer, Map<Integer, Vars>> t1 = toVars(region, conf.bam.getBam1(), ref, chrs, sample, splice, ampliconBasedCalling, 0, conf);
+//                Tuple2<Integer, Map<Integer, Vars>> t2 = toVars(region, conf.bam.getBam2(), ref, chrs, sample, splice, ampliconBasedCalling, t1._1, conf);
+//                somdict(region, t1._2, t2._2, sample, chrs, splice, ampliconBasedCalling, Math.max(t1._1, t2._1), conf, System.out);
+//            }
+//        }
+//
+//    }
 
-        executor.shutdown();
-
-    }
-
-    private static void vardictNotParallel(final List<List<Region>> segs, final Map<String, Integer> chrs, final String ampliconBasedCalling, final String sample, final Configuration conf) throws IOException {
-        for (List<Region> list : segs) {
-            for (Region region : list) {
-                Map<Integer, Character> ref = getREF(region, chrs, conf.fasta, conf.numberNucleotideToExtend);
-                final Set<String> splice = new HashSet<>();
-                Tuple2<Integer, Map<Integer, Vars>> tpl = toVars(region, conf.bam.getBam1(), ref, chrs, sample, splice, ampliconBasedCalling, 0, conf);
-                vardict(region, tpl._2, sample, splice, conf, System.out);
-            }
-        }
-    }
-
-    private static void somaticParallel(final List<List<Region>> segs, final Map<String, Integer> chrs, final String ampliconBasedCalling, final String sample, String samplem, final Configuration conf) throws IOException {
-        final ExecutorService executor = Executors.newFixedThreadPool(conf.threads);
-        final BlockingQueue<Future<OutputStream>> toSamdict = new LinkedBlockingQueue<>(10);
-
-        executor.submit(new Runnable() {
-
-            @Override
-            public void run() {
-                try {
-                    for (List<Region> list : segs) {
-                        for (Region region : list) {
-                            final Set<String> splice = new ConcurrentHashSet<>();
-                            Map<Integer, Character> ref = getREF(region, chrs, conf.fasta, conf.numberNucleotideToExtend);
-                            Future<Tuple2<Integer, Map<Integer, Vars>>> f1 = executor.submit(new ToVarsWorker(region, conf.bam.getBam1(), chrs, sample, splice, ampliconBasedCalling, ref, conf));
-                            Future<OutputStream> f2 = executor.submit(new SomdictWorker(region, conf.bam.getBam2(), chrs, splice, ampliconBasedCalling, ref, conf, f1, sample));
-                            toSamdict.put(f2);
-                        }
-                    }
-                    toSamdict.put(NULL_FUTURE);
-                } catch (IOException | InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-        });
-
-        try {
-            while (true) {
-                Future<OutputStream> wrk = toSamdict.take();
-                if (wrk == NULL_FUTURE) {
-                    break;
-                }
-                System.out.print(wrk.get());
-            }
-        } catch (InterruptedException | ExecutionException e) {
-            e.printStackTrace();
-        }
-        executor.shutdown();
-    }
-
-    private static void somaticNotParallel(final List<List<Region>> segs,
-            final Map<String, Integer> chrs, final String ampliconBasedCalling,
-            final String sample, String samplem, final Configuration conf) throws IOException {
-        for (List<Region> list : segs) {
-            for (Region region : list) {
-                final Set<String> splice = new ConcurrentHashSet<>();
-                Map<Integer, Character> ref = getREF(region, chrs, conf.fasta, conf.numberNucleotideToExtend);
-                Tuple2<Integer, Map<Integer, Vars>> t1 = toVars(region, conf.bam.getBam1(), ref, chrs, sample, splice, ampliconBasedCalling, 0, conf);
-                Tuple2<Integer, Map<Integer, Vars>> t2 = toVars(region, conf.bam.getBam2(), ref, chrs, sample, splice, ampliconBasedCalling, t1._1, conf);
-                somdict(region, t1._2, t2._2, sample, chrs, splice, ampliconBasedCalling, Math.max(t1._1, t2._1), conf, System.out);
-            }
-        }
-
+    public static Tuple2<String, String> getSampleNames(Configuration conf) {
+        return getSampleNames(conf.bam.getBamRaw(), conf.sampleName, conf.sampleNameRegexp);
     }
 
     final static Pattern SAMPLE_PATTERN = Pattern.compile("([^\\/\\._]+).sorted[^\\/]*.bam");
@@ -420,495 +426,495 @@ public class VarDict {
         return tuple(sample, samplem);
     }
 
-    /**
-     * Paired sample variant calling
-     * @param segs region
-     * @param vars1 variants from BAM1
-     * @param vars2 variants from BAM2
-     * @param sample sample name
-     * @param chrs map of chromosome lengths
-     * @param splice set of strings representing introns in splice
-     * @param ampliconBasedCalling string of maximum_distance:minimum_overlap for amplicon based calling
-     * @param rlen max read length
-     * @param conf Configuration
-     * @param out output stream
-     * @return maximum read length
-     * @throws IOException
-     */
-    static int somdict(Region segs, Map<Integer, Vars> vars1, Map<Integer, Vars> vars2,
-            String sample,
-            Map<String, Integer> chrs,
-            Set<String> splice,
-            String ampliconBasedCalling,
-            int rlen,
-            Configuration conf, PrintStream out) throws IOException {
-
-        Set<Integer> ps = new HashSet<>(vars1.keySet());
-        ps.addAll(vars2.keySet());
-        List<Integer> pp = new ArrayList<>(ps);
-        Collections.sort(pp);
-
-        for (Integer p : pp) {
-            Vars v1 = vars1.get(p);
-            Vars v2 = vars2.get(p);
-            if (v1 == null && v2 == null) { // both samples have no coverage
-                continue;
-            }
-
-            String vartype = "";
-
-            if (v1 == null) { // no coverage for sample 1
-                if (v2.var.isEmpty()) {
-                    continue;
-                }
-                Variant var = v2.var.get(0);
-
-                vartype = varType(var.refallele, var.varallele);
-                if (!isGoodVar(var, v2.ref, vartype, splice, conf)) {
-                    continue;
-                }
-                if (vartype.equals("Complex")) {
-                    adjComplex(var);
-                }
-                out.println(join("\t", sample, segs.gene, segs.chr,
-                        var.sp,
-                        var.ep,
-                        var.refallele,
-                        var.varallele,
-
-                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-
-                        joinVar2(var, "\t"),
-                        format("%.1f", var.nm),
-
-                        var.shift3,
-                        var.msi == 0 ? 0 : format("%.3f", var.msi),
-                        var.msint,
-                        var.leftseq,
-                        var.rightseq,
-
-                        segs.chr + ":" + segs.start + "-" + segs.end,
-                        "Deletion", vartype));
-            } else if (v2 == null) { // no coverage for sample 2
-                if (v1.var.isEmpty()) {
-                    continue;
-                }
-                Variant var = v1.var.get(0);
-                vartype = varType(var.refallele, var.varallele);
-                if (!isGoodVar(var, v1.ref, vartype, splice, conf)) {
-                    continue;
-                }
-                if (vartype.equals("Complex")) {
-                    adjComplex(var);
-                }
-                out.println(join("\t", sample, segs.gene, segs.chr,
-
-                        var.sp,
-                        var.ep,
-                        var.refallele,
-                        var.varallele,
-
-                        joinVar2(var, "\t"),
-                        format("%.1f", var.nm),
-
-                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-
-                        var.shift3,
-                        var.msi == 0 ? 0 : format("%.3f", var.msi),
-                        var.msint,
-                        var.leftseq,
-                        var.rightseq,
-
-                        segs.chr + ":" + segs.start + "-" + segs.end,
-                        "SampleSpecific", vartype));
-
-            } else { // both samples have coverage
-                if (v1.var.isEmpty() && v2.var.isEmpty()) {
-                    continue;
-                }
-                if (v1.var.size() > 0) {
-                    int n = 0;
-                    while (n < v1.var.size()
-                            && isGoodVar(v1.var.get(n), v1.ref, varType(v1.var.get(n).refallele, v1.var.get(n).varallele), splice, conf)) {
-                        final Variant vref = v1.var.get(n);
-                        final String nt = vref.n;
-//                        if (nt.length() > 1
-//                                && vref.refallele.length() == vref.varallele.length()
-//                                && (!isGoodVar(getVarMaybe(vars2, p, varn, nt), null, null, splice, conf))
-//                                && !vref.genotype.contains("-")
-//                                && !vref.genotype.contains("m")
-//                                && !vref.genotype.contains("i")) {
+//    /**
+//     * Paired sample variant calling
+//     *
+//     * @param segs                 region
+//     * @param vars1                variants from BAM1
+//     * @param vars2                variants from BAM2
+//     * @param sample               sample name
+//     * @param chrs                 map of chromosome lengths
+//     * @param splice               set of strings representing introns in splice
+//     * @param ampliconBasedCalling string of maximum_distance:minimum_overlap for amplicon based calling
+//     * @param rlen                 max read length
+//     * @param conf                 Configuration
+//     * @param out                  output stream
+//     * @return maximum read length
+//     * @throws IOException
+//     */
+//    static int somdict(Region segs, Map<Integer, Vars> vars1, Map<Integer, Vars> vars2,
+//                       String sample,
+//                       Map<String, Integer> chrs,
+//                       Set<String> splice,
+//                       String ampliconBasedCalling,
+//                       int rlen,
+//                       Configuration conf, PrintStream out) throws IOException {
 //
-//                            String fnt = substr(nt, 0, -1).replaceFirst("&$", "");
-//                            String lnt = substr(nt, 1).replaceFirst("^&", "");
-//                            if (lnt.length() > 1) {
-//                                lnt = lnt.charAt(0) + "&" + lnt.substring(1);
-//                            }
-//                            Variant vf = getVarMaybe(v2, varn, fnt);
-//                            Variant vl = getVarMaybe(vars2, p + nt.length() - 2, varn, lnt);
-//                            if (vf != null && isGoodVar(vf, v2.ref, null, splice, conf)) {
-//                                vref.sp += vref.refallele.length() - 1;
-//                                vref.refallele = substr(vref.refallele, -1);
-//                                vref.varallele = substr(vref.varallele, -1);
-//                            } else if (vl != null && isGoodVar(vl, getVarMaybe(vars2, p + nt.length() - 2, VarsType.ref), null, splice, conf)) {
-//                                vref.ep += vref.refallele.length() - 1;
-//                                vref.refallele = substr(vref.refallele, 0, -1);
-//                                vref.varallele = substr(vref.varallele, 0, -1);
-//                            }
+//        Set<Integer> ps = new HashSet<>(vars1.keySet());
+//        ps.addAll(vars2.keySet());
+//        List<Integer> pp = new ArrayList<>(ps);
+//        Collections.sort(pp);
 //
+//        for (Integer p : pp) {
+//            Vars v1 = vars1.get(p);
+//            Vars v2 = vars2.get(p);
+//            if (v1 == null && v2 == null) { // both samples have no coverage
+//                continue;
+//            }
+//
+//            String vartype = "";
+//
+//            if (v1 == null) { // no coverage for sample 1
+//                if (v2.var.isEmpty()) {
+//                    continue;
+//                }
+//                Variant var = v2.var.get(0);
+//
+//                vartype = varType(var.refallele, var.varallele);
+//                if (!isGoodVar(var, v2.ref, vartype, splice, conf)) {
+//                    continue;
+//                }
+//                if (vartype.equals("Complex")) {
+//                    adjComplex(var);
+//                }
+//                out.println(join("\t", sample, segs.gene, segs.chr,
+//                        var.sp,
+//                        var.ep,
+//                        var.refallele,
+//                        var.varallele,
+//
+//                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+//
+//                        joinVar2(var, "\t"),
+//                        format("%.1f", var.nm),
+//
+//                        var.shift3,
+//                        var.msi == 0 ? 0 : format("%.3f", var.msi),
+//                        var.msint,
+//                        var.leftseq,
+//                        var.rightseq,
+//
+//                        segs.chr + ":" + segs.start + "-" + segs.end,
+//                        "Deletion", vartype));
+//            } else if (v2 == null) { // no coverage for sample 2
+//                if (v1.var.isEmpty()) {
+//                    continue;
+//                }
+//                Variant var = v1.var.get(0);
+//                vartype = varType(var.refallele, var.varallele);
+//                if (!isGoodVar(var, v1.ref, vartype, splice, conf)) {
+//                    continue;
+//                }
+//                if (vartype.equals("Complex")) {
+//                    adjComplex(var);
+//                }
+//                out.println(join("\t", sample, segs.gene, segs.chr,
+//
+//                        var.sp,
+//                        var.ep,
+//                        var.refallele,
+//                        var.varallele,
+//
+//                        joinVar2(var, "\t"),
+//                        format("%.1f", var.nm),
+//
+//                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+//
+//                        var.shift3,
+//                        var.msi == 0 ? 0 : format("%.3f", var.msi),
+//                        var.msint,
+//                        var.leftseq,
+//                        var.rightseq,
+//
+//                        segs.chr + ":" + segs.start + "-" + segs.end,
+//                        "SampleSpecific", vartype));
+//
+//            } else { // both samples have coverage
+//                if (v1.var.isEmpty() && v2.var.isEmpty()) {
+//                    continue;
+//                }
+//                if (v1.var.size() > 0) {
+//                    int n = 0;
+//                    while (n < v1.var.size()
+//                            && isGoodVar(v1.var.get(n), v1.ref, varType(v1.var.get(n).refallele, v1.var.get(n).varallele), splice, conf)) {
+//                        final Variant vref = v1.var.get(n);
+//                        final String nt = vref.n;
+////                        if (nt.length() > 1
+////                                && vref.refallele.length() == vref.varallele.length()
+////                                && (!isGoodVar(getVarMaybe(vars2, p, varn, nt), null, null, splice, conf))
+////                                && !vref.genotype.contains("-")
+////                                && !vref.genotype.contains("m")
+////                                && !vref.genotype.contains("i")) {
+////
+////                            String fnt = substr(nt, 0, -1).replaceFirst("&$", "");
+////                            String lnt = substr(nt, 1).replaceFirst("^&", "");
+////                            if (lnt.length() > 1) {
+////                                lnt = lnt.charAt(0) + "&" + lnt.substring(1);
+////                            }
+////                            Variant vf = getVarMaybe(v2, varn, fnt);
+////                            Variant vl = getVarMaybe(vars2, p + nt.length() - 2, varn, lnt);
+////                            if (vf != null && isGoodVar(vf, v2.ref, null, splice, conf)) {
+////                                vref.sp += vref.refallele.length() - 1;
+////                                vref.refallele = substr(vref.refallele, -1);
+////                                vref.varallele = substr(vref.varallele, -1);
+////                            } else if (vl != null && isGoodVar(vl, getVarMaybe(vars2, p + nt.length() - 2, VarsType.ref), null, splice, conf)) {
+////                                vref.ep += vref.refallele.length() - 1;
+////                                vref.refallele = substr(vref.refallele, 0, -1);
+////                                vref.varallele = substr(vref.varallele, 0, -1);
+////                            }
+////
+////                        }
+//                        vartype = varType(vref.refallele, vref.varallele);
+//                        if (vartype.equals("Complex")) {
+//                            adjComplex(vref);
 //                        }
-                        vartype = varType(vref.refallele, vref.varallele);
-                        if (vartype.equals("Complex")) {
-                            adjComplex(vref);
-                        }
-                        Variant v2nt = getVarMaybe(v2, varn, nt);
-                        if (v2nt != null) {
-                            String type;
-                            if (isGoodVar(v2nt, v2.ref, vartype, splice, conf)) {
-                                if (vref.freq > (1 - conf.lofreq) && v2nt.freq < 0.8d && v2nt.freq > 0.2d) {
-                                    type = "LikelyLOH";
-                                } else {
-                                    type = "Germline";
-                                }
-                            } else {
-                                if (v2nt.freq < conf.lofreq || v2nt.cov <= 1) {
-                                    type = "LikelySomatic";
-                                } else {
-                                    type = "AFDiff";
-                                }
-                            }
-                            if (isNoise(v2nt, conf.goodq, conf.lofreq) && vartype.equals("SNV")) {
-                                type = "StrongSomatic";
-                            }
-                            out.println(join("\t", sample, segs.gene, segs.chr,
-                                    vref.sp,
-                                    vref.ep,
-                                    vref.refallele,
-                                    vref.varallele,
+//                        Variant v2nt = getVarMaybe(v2, varn, nt);
+//                        if (v2nt != null) {
+//                            String type;
+//                            if (isGoodVar(v2nt, v2.ref, vartype, splice, conf)) {
+//                                if (vref.freq > (1 - conf.lofreq) && v2nt.freq < 0.8d && v2nt.freq > 0.2d) {
+//                                    type = "LikelyLOH";
+//                                } else {
+//                                    type = "Germline";
+//                                }
+//                            } else {
+//                                if (v2nt.freq < conf.lofreq || v2nt.cov <= 1) {
+//                                    type = "LikelySomatic";
+//                                } else {
+//                                    type = "AFDiff";
+//                                }
+//                            }
+//                            if (isNoise(v2nt, conf.goodq, conf.lofreq) && vartype.equals("SNV")) {
+//                                type = "StrongSomatic";
+//                            }
+//                            out.println(join("\t", sample, segs.gene, segs.chr,
+//                                    vref.sp,
+//                                    vref.ep,
+//                                    vref.refallele,
+//                                    vref.varallele,
+//
+//                                    joinVar2(vref, "\t"),
+//                                    format("%.1f", vref.nm),
+//
+//                                    joinVar2(v2nt, "\t"),
+//                                    format("%.1f", v2nt.nm),
+//
+//                                    v2nt.shift3,
+//                                    v2nt.msi == 0 ? 0 : format("%.3f", v2nt.msi),
+//                                    v2nt.msint,
+//                                    v2nt.leftseq,
+//                                    v2nt.rightseq,
+//
+//                                    segs.chr + ":" + segs.start + "-" + segs.end,
+//                                    type, vartype));
+//
+//                        } else { // sample 1 only, should be strong somatic
+//                            String type = "StrongSomatic";
+//                            v2nt = new Variant();
+//                            v2.varn.put(nt, v2nt); // Ensure it's initialized before passing to combineAnalysis
+//                            Tuple2<Integer, String> tpl = combineAnalysis(vref, v2nt, segs.chr, p, nt, chrs, sample, splice, ampliconBasedCalling, rlen, conf);
+//                            rlen = tpl._1;
+//                            String newtype = tpl._2;
+//                            if ("FALSE".equals(newtype)) {
+//                                n++;
+//                                continue;
+//                            }
+//                            if (newtype.length() > 0) {
+//                                type = newtype;
+//                            }
+//                            if (type.equals("StrongSomatic")) {
+//                                String tvf;
+//                                if (v2.ref == null) {
+//                                    Variant v2m = getVarMaybe(v2, var, 0);
+//                                    int tcov = v2m != null && v2m.tcov != 0 ? v2m.tcov : 0;
+//                                    tvf = join("\t", tcov, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+//                                } else {
+//                                    Variant v2ref = vars2.get(p).ref;
+//                                    tvf = join("\t", joinVar2(v2ref, "\t"), format("%.1f", v2ref.nm));
+//                                }
+//                                out.println(join("\t", sample, segs.gene, segs.chr,
+//                                        vref.sp,
+//                                        vref.ep,
+//                                        vref.refallele,
+//                                        vref.varallele,
+//
+//                                        joinVar2(vref, "\t"),
+//                                        format("%.1f", vref.nm),
+//
+//                                        tvf,
+//                                        vref.shift3,
+//                                        vref.msi == 0 ? 0 : format("%.3f", vref.msi),
+//                                        vref.msint,
+//                                        vref.leftseq,
+//                                        vref.rightseq,
+//
+//                                        segs.chr + ":" + segs.start + "-" + segs.end,
+//                                        "StrongSomatic", vartype));
+//                            } else {
+//                                out.println(join("\t", sample, segs.gene, segs.chr,
+//
+//                                        vref.sp,
+//                                        vref.ep,
+//                                        vref.refallele,
+//                                        vref.varallele,
+//
+//                                        joinVar2(vref, "\t"),
+//                                        format("%.1f", vref.nm),
+//
+//                                        joinVar2(v2nt, "\t"),
+//                                        format("%.1f", v2nt.nm),
+//
+//                                        vref.shift3,
+//                                        vref.msi == 0 ? 0 : format("%.3f", vref.msi),
+//                                        vref.msint,
+//                                        vref.leftseq,
+//                                        vref.rightseq,
+//                                        segs.chr + ":" + segs.start + "-" + segs.end,
+//
+//                                        type, vartype));
+//                            }
+//                        }
+//                        n++;
+//                    }
+//                    if (n == 0) {
+//                        if (v2.var.isEmpty()) {
+//                            continue;
+//                        }
+//                        Variant v2var = v2.var.get(0);
+//                        vartype = varType(v2var.refallele, v2var.varallele);
+//                        if (!isGoodVar(v2var, v2.ref, vartype, splice, conf)) {
+//                            continue;
+//                        }
+//                        // potentail LOH
+//                        String nt = v2var.n;
+//                        Variant v1nt = getVarMaybe(v1, varn, nt);
+//                        if (v1nt != null) {
+//                            String type = v1nt.freq < conf.lofreq ? "LikelyLOH" : "Germline";
+//                            if ("Complex".equals(vartype)) {
+//                                adjComplex(v1nt);
+//                            }
+//                            out.println(join("\t", sample, segs.gene, segs.chr,
+//                                    v1nt.sp,
+//                                    v1nt.ep,
+//                                    v1nt.refallele,
+//                                    v1nt.varallele,
+//
+//                                    joinVar2(v1nt, "\t"),
+//                                    format("%.1f", v1nt.nm),
+//
+//                                    joinVar2(v2var, "\t"),
+//                                    format("%.1f", v2var.nm),
+//
+//                                    v2var.shift3,
+//                                    v2var.msi == 0 ? 0 : format("%.3f", v2var.msi),
+//                                    v2var.msint,
+//                                    v2var.leftseq,
+//                                    v2var.rightseq,
+//
+//                                    segs.chr + ":" + segs.start + "-" + segs.end,
+//                                    type, varType(v1nt.refallele, v1nt.varallele)
+//                            ));
+//                        } else {
+//                            String th1;
+//                            Variant v1ref = v1.ref;
+//                            if (v1ref != null) {
+//                                th1 = join("\t",
+//                                        joinVar2(v1ref, "\t"),
+//                                        format("%.1f", v1ref.nm)
+//                                );
+//                            } else {
+//                                th1 = join("\t", v1.var.get(0).tcov, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+//                            }
+//                            if ("Complex".equals(vartype)) {
+//                                adjComplex(v2var);
+//                            }
+//                            out.println(join("\t", sample, segs.gene, segs.chr,
+//                                    v2var.sp,
+//                                    v2var.ep,
+//                                    v2var.refallele,
+//                                    v2var.varallele,
+//                                    th1,
+//
+//                                    joinVar2(v2var, "\t"),
+//                                    format("%.1f", v2var.nm),
+//
+//                                    v2var.shift3,
+//                                    v2var.msi == 0 ? 0 : format("%.3f", v2var.msi),
+//                                    v2var.msint,
+//                                    v2var.leftseq,
+//                                    v2var.rightseq,
+//
+//                                    segs.chr + ":" + segs.start + "-" + segs.end,
+//                                    "StrongLOH", vartype
+//                            ));
+//                        }
+//                    }
+//                } else if (v2.var.size() > 0) { // sample 1 has only reference
+//                    Variant v2var = v2.var.get(0);
+//                    vartype = varType(v2var.refallele, v2var.varallele);
+//                    if (!isGoodVar(v2var, v2.ref, vartype, splice, conf)) {
+//                        continue;
+//                    }
+//                    // potential LOH
+//                    String nt = v2var.n;
+//                    String type = "StrongLOH";
+//                    Variant v1nt = v1.varn.get(nt);
+//                    if (v1nt == null) {
+//                        v1nt = new Variant();
+//                        v1.varn.put(nt, v1nt);
+//                    }
+//                    v1nt.cov = 0;
+//                    Tuple2<Integer, String> tpl = combineAnalysis(v2.varn.get(nt), v1nt, segs.chr, p, nt, chrs, sample, splice, ampliconBasedCalling, rlen, conf);
+//                    rlen = tpl._1;
+//                    String newtype = tpl._2;
+//                    if ("FALSE".equals(newtype)) {
+//                        continue;
+//                    }
+//                    String th1;
+//                    if (newtype.length() > 0) {
+//                        type = newtype;
+//                        th1 = join("\t",
+//                                joinVar2(v1nt, "\t"),
+//                                format("%.1f", v1nt.nm)
+//                        );
+//                    } else {
+//                        Variant v1ref = v1.ref;
+//                        th1 = join("\t",
+//                                joinVar2(v1ref, "\t"),
+//                                format("%.1f", v1ref.nm)
+//                        );
+//                    }
+//
+//                    if ("Complex".equals(vartype)) {
+//                        adjComplex(v2var);
+//                    }
+//                    out.println(join("\t", sample, segs.gene, segs.chr,
+//                            v2var.sp,
+//                            v2var.ep,
+//                            v2var.refallele,
+//                            v2var.varallele,
+//
+//                            th1,
+//
+//                            joinVar2(v2var, "\t"),
+//                            format("%.1f", v2var.nm),
+//
+//                            v2var.shift3,
+//                            v2var.msi == 0 ? 0 : format("%.3f", v2var.msi),
+//                            v2var.msint,
+//                            v2var.leftseq,
+//                            v2var.rightseq,
+//
+//                            segs.chr + ":" + segs.start + "-" + segs.end,
+//                            type, vartype
+//
+//                    ));
+//                }
+//            }
+//        }
+//
+//        return rlen;
+//    }
 
-                                    joinVar2(vref, "\t"),
-                                    format("%.1f", vref.nm),
-
-                                    joinVar2(v2nt, "\t"),
-                                    format("%.1f", v2nt.nm),
-
-                                    v2nt.shift3,
-                                    v2nt.msi == 0 ? 0 : format("%.3f", v2nt.msi),
-                                    v2nt.msint,
-                                    v2nt.leftseq,
-                                    v2nt.rightseq,
-
-                                    segs.chr + ":" + segs.start + "-" + segs.end,
-                                    type, vartype));
-
-                        } else { // sample 1 only, should be strong somatic
-                            String type = "StrongSomatic";
-                            v2nt = new Variant();
-                            v2.varn.put(nt, v2nt); // Ensure it's initialized before passing to combineAnalysis
-                            Tuple2<Integer, String> tpl = combineAnalysis(vref, v2nt, segs.chr, p, nt, chrs, sample, splice, ampliconBasedCalling, rlen, conf);
-                            rlen = tpl._1;
-                            String newtype = tpl._2;
-                            if ("FALSE".equals(newtype)) {
-                                n++;
-                                continue;
-                            }
-                            if (newtype.length() > 0) {
-                                type = newtype;
-                            }
-                            if (type.equals("StrongSomatic")) {
-                                String tvf;
-                                if (v2.ref == null) {
-                                    Variant v2m = getVarMaybe(v2, var, 0);
-                                    int tcov = v2m != null && v2m.tcov != 0 ? v2m.tcov : 0;
-                                    tvf = join("\t", tcov, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-                                } else {
-                                    Variant v2ref = vars2.get(p).ref;
-                                    tvf = join("\t", joinVar2(v2ref, "\t"), format("%.1f", v2ref.nm));
-                                }
-                                out.println(join("\t", sample, segs.gene, segs.chr,
-                                        vref.sp,
-                                        vref.ep,
-                                        vref.refallele,
-                                        vref.varallele,
-
-                                        joinVar2(vref, "\t"),
-                                        format("%.1f", vref.nm),
-
-                                        tvf,
-                                        vref.shift3,
-                                        vref.msi == 0 ? 0 : format("%.3f", vref.msi),
-                                        vref.msint,
-                                        vref.leftseq,
-                                        vref.rightseq,
-
-                                        segs.chr + ":" + segs.start + "-" + segs.end,
-                                        "StrongSomatic", vartype));
-                            } else {
-                                out.println(join("\t", sample, segs.gene, segs.chr,
-
-                                        vref.sp,
-                                        vref.ep,
-                                        vref.refallele,
-                                        vref.varallele,
-
-                                        joinVar2(vref, "\t"),
-                                        format("%.1f", vref.nm),
-
-                                        joinVar2(v2nt, "\t"),
-                                        format("%.1f", v2nt.nm),
-
-                                        vref.shift3,
-                                        vref.msi == 0 ? 0 : format("%.3f", vref.msi),
-                                        vref.msint,
-                                        vref.leftseq,
-                                        vref.rightseq,
-                                        segs.chr + ":" + segs.start + "-" + segs.end,
-
-                                        type, vartype));
-                            }
-                        }
-                        n++;
-                    }
-                    if (n == 0) {
-                        if (v2.var.isEmpty()) {
-                            continue;
-                        }
-                        Variant v2var = v2.var.get(0);
-                        vartype = varType(v2var.refallele, v2var.varallele);
-                        if (!isGoodVar(v2var, v2.ref, vartype, splice, conf)) {
-                            continue;
-                        }
-                        // potentail LOH
-                        String nt = v2var.n;
-                        Variant v1nt = getVarMaybe(v1, varn, nt);
-                        if (v1nt != null) {
-                            String type = v1nt.freq < conf.lofreq ? "LikelyLOH" : "Germline";
-                            if ("Complex".equals(vartype)) {
-                                adjComplex(v1nt);
-                            }
-                            out.println(join("\t", sample, segs.gene, segs.chr,
-                                    v1nt.sp,
-                                    v1nt.ep,
-                                    v1nt.refallele,
-                                    v1nt.varallele,
-
-                                    joinVar2(v1nt, "\t"),
-                                    format("%.1f", v1nt.nm),
-
-                                    joinVar2(v2var, "\t"),
-                                    format("%.1f", v2var.nm),
-
-                                    v2var.shift3,
-                                    v2var.msi == 0 ? 0 : format("%.3f", v2var.msi),
-                                    v2var.msint,
-                                    v2var.leftseq,
-                                    v2var.rightseq,
-
-                                    segs.chr + ":" + segs.start + "-" + segs.end,
-                                    type, varType(v1nt.refallele, v1nt.varallele)
-                                    ));
-                        } else {
-                            String th1;
-                            Variant v1ref = v1.ref;
-                            if (v1ref != null) {
-                                th1 = join("\t",
-                                        joinVar2(v1ref, "\t"),
-                                        format("%.1f", v1ref.nm)
-                                        );
-                            } else {
-                                th1 = join("\t", v1.var.get(0).tcov, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-                            }
-                            if ("Complex".equals(vartype)) {
-                                adjComplex(v2var);
-                            }
-                            out.println(join("\t", sample, segs.gene, segs.chr,
-                                    v2var.sp,
-                                    v2var.ep,
-                                    v2var.refallele,
-                                    v2var.varallele,
-                                    th1,
-
-                                    joinVar2(v2var, "\t"),
-                                    format("%.1f", v2var.nm),
-
-                                    v2var.shift3,
-                                    v2var.msi == 0 ? 0 : format("%.3f", v2var.msi),
-                                    v2var.msint,
-                                    v2var.leftseq,
-                                    v2var.rightseq,
-
-                                    segs.chr + ":" + segs.start + "-" + segs.end,
-                                    "StrongLOH", vartype
-                                    ));
-                        }
-                    }
-                } else if (v2.var.size() > 0) { // sample 1 has only reference
-                    Variant v2var = v2.var.get(0);
-                    vartype = varType(v2var.refallele, v2var.varallele);
-                    if (!isGoodVar(v2var, v2.ref, vartype, splice, conf)) {
-                        continue;
-                    }
-                    // potential LOH
-                    String nt = v2var.n;
-                    String type = "StrongLOH";
-                    Variant v1nt = v1.varn.get(nt);
-                    if (v1nt == null) {
-                        v1nt = new Variant();
-                        v1.varn.put(nt, v1nt);
-                    }
-                    v1nt.cov = 0;
-                    Tuple2<Integer, String> tpl = combineAnalysis(v2.varn.get(nt), v1nt, segs.chr, p, nt, chrs, sample, splice, ampliconBasedCalling, rlen, conf);
-                    rlen = tpl._1;
-                    String newtype = tpl._2;
-                    if ("FALSE".equals(newtype)) {
-                        continue;
-                    }
-                    String th1;
-                    if (newtype.length() > 0) {
-                        type = newtype;
-                        th1 = join("\t",
-                                joinVar2(v1nt, "\t"),
-                                format("%.1f", v1nt.nm)
-                                );
-                    } else {
-                        Variant v1ref = v1.ref;
-                        th1 = join("\t",
-                                joinVar2(v1ref, "\t"),
-                                format("%.1f", v1ref.nm)
-                                );
-                    }
-
-                    if ("Complex".equals(vartype)) {
-                        adjComplex(v2var);
-                    }
-                    out.println(join("\t", sample, segs.gene, segs.chr,
-                            v2var.sp,
-                            v2var.ep,
-                            v2var.refallele,
-                            v2var.varallele,
-
-                            th1,
-
-                            joinVar2(v2var, "\t"),
-                            format("%.1f", v2var.nm),
-
-                            v2var.shift3,
-                            v2var.msi == 0 ? 0 : format("%.3f", v2var.msi),
-                            v2var.msint,
-                            v2var.leftseq,
-                            v2var.rightseq,
-
-                            segs.chr + ":" + segs.start + "-" + segs.end,
-                            type, vartype
-
-                            ));
-                }
-            }
-        }
-
-        return rlen;
-    }
-
-    /**
-     * Taken a likely somatic indels and see whether combine two bam files still support somatic status. This is mainly for Indels
-     * that softclipping overhang is too short to positively being called in one bam file, but can be called in the other bam file,
-     * thus creating false positives
-     *
-     * @param var1 variant 1
-     * @param var2 variant 2
-     * @param chr chromosome
-     * @param p position
-     * @param nt nucleotide
-     *
-     * @param chrs map of chromosome lengths
-     * @param splice set of strings representing introns in splice
-     * @param ampliconBasedCalling string of maximum_distance:minimum_overlap for amplicon based calling
-     * @param rlen max read length
-     * @param conf Configuration
-     * @return (new <code>rlen</code>, "FALSE" | "")
-     * @throws IOException
-     */
-    static Tuple2<Integer, String> combineAnalysis(Variant var1, Variant var2, String chr, int p, String nt,
-            Map<String, Integer> chrs, String sample, Set<String> splice, String ampliconBasedCalling, int rlen, Configuration conf) throws IOException {
-        if (conf.y) {
-            System.err.printf("Start Combine %s %s\n", p, nt);
-        }
-        Region region = new Region(chr, var1.sp - rlen, var1.ep + rlen, "");
-        Map<Integer, Character> ref = getREF(region, chrs, conf.fasta, conf.numberNucleotideToExtend);
-        Tuple2<Integer, Map<Integer, Vars>> tpl = toVars(region, conf.bam.getBam1() + ":" + conf.bam.getBam2(), ref,
-                chrs, sample, splice, ampliconBasedCalling, rlen, conf);
-        rlen = tpl._1;
-        Map<Integer, Vars> vars = tpl._2;
-        Variant vref = getVarMaybe(vars, p, varn, nt);
-        if (vref != null) {
-            if (conf.y) {
-                System.err.printf("Combine: 1: %s comb: %s\n", var1.cov, vref.cov);
-            }
-            if (vref.cov - var1.cov >= conf.minr) {
-                var2.tcov = vref.tcov - var1.tcov;
-                if (var2.tcov < 0)
-                    var2.tcov = 0;
-
-                var2.cov = vref.cov - var1.cov;
-                if (var2.cov < 0)
-                    var2.cov = 0;
-
-                var2.rfc = vref.rfc - var1.rfc;
-                if (var2.rfc < 0)
-                    var2.rfc = 0;
-
-                var2.rrc = vref.rrc - var1.rrc;
-                if (var2.rrc < 0)
-                    var2.rrc = 0;
-
-                var2.fwd = vref.fwd - var1.fwd;
-                if (var2.fwd < 0)
-                    var2.fwd = 0;
-
-                var2.rev = vref.rev - var1.rev;
-                if (var2.rev < 0)
-                    var2.rev = 0;
-
-                var2.pmean = (vref.pmean * vref.cov - var1.pmean * var1.cov) / var2.cov;
-                var2.qual = (vref.qual * vref.cov - var1.qual * var1.cov) / var2.cov;
-                var2.mapq = (vref.mapq * vref.cov - var1.mapq * var1.cov) / var2.cov;
-                var2.hifreq = (vref.hifreq * vref.cov - var1.hifreq * var1.cov) / var2.cov;
-                var2.extrafreq = (vref.extrafreq * vref.cov - var1.extrafreq * var1.cov) / var2.cov;
-                var2.nm = (vref.nm * vref.cov - var1.nm * var1.cov) / var2.cov;
-
-                var2.pstd = true;
-                var2.qstd = true;
-
-                if (var2.tcov <= 0) {
-                    return tuple(rlen, "FALSE");
-                }
-
-                var2.freq = round(var2.cov / (double)var2.tcov, 4);
-                var2.qratio = var1.qratio; // Can't back calculate and should be inaccurate
-                var2.genotype = vref.genotype;
-                var2.bias = strandBias(var2.rfc, var2.rrc, conf.bias, conf.minb) + ";" + strandBias(var2.fwd, var2.rev, conf.bias, conf.minb);
-                return tuple(rlen, "Germline");
-            } else if (vref.cov < var1.cov - 2) {
-                if (conf.y) {
-                    System.err.printf("Combine produce less: %s %s %s %s %s\n", chr, p, nt, vref.cov, var1.cov);
-                }
-                return tuple(rlen, "FALSE");
-            } else {
-                return tuple(rlen, "");
-            }
-
-        }
-        return tuple(rlen, "FALSE");
-    }
+//    /**
+//     * Taken a likely somatic indels and see whether combine two bam files still support somatic status. This is mainly for Indels
+//     * that softclipping overhang is too short to positively being called in one bam file, but can be called in the other bam file,
+//     * thus creating false positives
+//     *
+//     * @param var1                 variant 1
+//     * @param var2                 variant 2
+//     * @param chr                  chromosome
+//     * @param p                    position
+//     * @param nt                   nucleotide
+//     * @param chrs                 map of chromosome lengths
+//     * @param splice               set of strings representing introns in splice
+//     * @param ampliconBasedCalling string of maximum_distance:minimum_overlap for amplicon based calling
+//     * @param rlen                 max read length
+//     * @param conf                 Configuration
+//     * @return (new <code>rlen</code>, "FALSE" | "")
+//     * @throws IOException
+//     */
+//    static Tuple2<Integer, String> combineAnalysis(Variant var1, Variant var2, String chr, int p, String nt,
+//                                                   Map<String, Integer> chrs, String sample, Set<String> splice, String ampliconBasedCalling, int rlen, Configuration conf) throws IOException {
+//        if (conf.y) {
+//            System.err.printf("Start Combine %s %s\n", p, nt);
+//        }
+//        Region region = new Region(chr, var1.sp - rlen, var1.ep + rlen, "");
+//        Map<Integer, Character> ref = getREF(region, chrs, conf.fasta, conf.numberNucleotideToExtend);
+//        Tuple2<Integer, Map<Integer, Vars>> tpl = toVars(region, conf.bam.getBam1() + ":" + conf.bam.getBam2(), ref,
+//                chrs, sample, splice, ampliconBasedCalling, rlen, conf);
+//        rlen = tpl._1;
+//        Map<Integer, Vars> vars = tpl._2;
+//        Variant vref = getVarMaybe(vars, p, varn, nt);
+//        if (vref != null) {
+//            if (conf.y) {
+//                System.err.printf("Combine: 1: %s comb: %s\n", var1.cov, vref.cov);
+//            }
+//            if (vref.cov - var1.cov >= conf.minr) {
+//                var2.tcov = vref.tcov - var1.tcov;
+//                if (var2.tcov < 0)
+//                    var2.tcov = 0;
+//
+//                var2.cov = vref.cov - var1.cov;
+//                if (var2.cov < 0)
+//                    var2.cov = 0;
+//
+//                var2.rfc = vref.rfc - var1.rfc;
+//                if (var2.rfc < 0)
+//                    var2.rfc = 0;
+//
+//                var2.rrc = vref.rrc - var1.rrc;
+//                if (var2.rrc < 0)
+//                    var2.rrc = 0;
+//
+//                var2.fwd = vref.fwd - var1.fwd;
+//                if (var2.fwd < 0)
+//                    var2.fwd = 0;
+//
+//                var2.rev = vref.rev - var1.rev;
+//                if (var2.rev < 0)
+//                    var2.rev = 0;
+//
+//                var2.pmean = (vref.pmean * vref.cov - var1.pmean * var1.cov) / var2.cov;
+//                var2.qual = (vref.qual * vref.cov - var1.qual * var1.cov) / var2.cov;
+//                var2.mapq = (vref.mapq * vref.cov - var1.mapq * var1.cov) / var2.cov;
+//                var2.hifreq = (vref.hifreq * vref.cov - var1.hifreq * var1.cov) / var2.cov;
+//                var2.extrafreq = (vref.extrafreq * vref.cov - var1.extrafreq * var1.cov) / var2.cov;
+//                var2.nm = (vref.nm * vref.cov - var1.nm * var1.cov) / var2.cov;
+//
+//                var2.pstd = true;
+//                var2.qstd = true;
+//
+//                if (var2.tcov <= 0) {
+//                    return tuple(rlen, "FALSE");
+//                }
+//
+//                var2.freq = round(var2.cov / (double) var2.tcov, 4);
+//                var2.qratio = var1.qratio; // Can't back calculate and should be inaccurate
+//                var2.genotype = vref.genotype;
+//                var2.bias = strandBias(var2.rfc, var2.rrc, conf.bias, conf.minb) + ";" + strandBias(var2.fwd, var2.rev, conf.bias, conf.minb);
+//                return tuple(rlen, "Germline");
+//            } else if (vref.cov < var1.cov - 2) {
+//                if (conf.y) {
+//                    System.err.printf("Combine produce less: %s %s %s %s %s\n", chr, p, nt, vref.cov, var1.cov);
+//                }
+//                return tuple(rlen, "FALSE");
+//            } else {
+//                return tuple(rlen, "");
+//            }
+//
+//        }
+//        return tuple(rlen, "FALSE");
+//    }
 
     /**
      * A variance is considered noise if the quality is below <code>goodq</code> and there're no more than 3 reads
      *
-     * @param vref Variant
-     * @param goodq quality threshold
+     * @param vref   Variant
+     * @param goodq  quality threshold
      * @param lofreq The minimun alelle frequency allowed in normal for a somatic mutation
      * @return Returns <tt>true</tt> if variance is considered noise if the quality is below <code>goodq</code> and there're no more
-     *         than 3 reads
+     * than 3 reads
      */
     static boolean isNoise(Variant vref, double goodq, double lofreq) {
         final double qual = vref.qual;
@@ -930,14 +936,15 @@ public class VarDict {
 
     /**
      * Single sample mode variant calling
+     *
      * @param region region of interest
-     * @param vars map of variations
+     * @param vars   map of variations
      * @param sample sample name
      * @param splice set of strings representing spliced regions
-     * @param conf configuration
-     * @param out output stream
+     * @param conf   configuration
      */
-    static void vardict(Region region, Map<Integer, Vars> vars, String sample, Set<String> splice, Configuration conf, PrintStream out) {
+    public static List<String> vardict(Region region, Map<Integer, Vars> vars, String sample, Set<String> splice, Configuration conf) {
+        List<String> result = new ArrayList<String>();
         for (int p = region.start; p <= region.end; p++) {
             List<String> vts = new ArrayList<>();
             List<Variant> vrefs = new ArrayList<>();
@@ -947,10 +954,10 @@ public class VarDict {
                 }
                 Variant vref = getVarMaybe(vars, p, ref);
                 if (vref == null) {
-                    out.println(join("\t", sample, region.gene, region.chr, p, p,
+                    result.add(join("\t", sample, region.gene, region.chr, p, p,
                             "", "", 0, 0, 0, 0, 0, 0, "", 0, "0;0", 0, 0, 0, 0, 0, "", 0, 0, 0, 0, 0, 0, "", "", 0, 0,
                             region.chr + ":" + region.start + "-" + region.end, ""
-                            ));
+                    ));
                     continue;
                 }
                 vts.add("");
@@ -980,7 +987,7 @@ public class VarDict {
                 if ("Complex".equals(vartype)) {
                     adjComplex(vref);
                 }
-                out.println(join("\t", sample, region.gene, region.chr,
+                result.add(join("\t", sample, region.gene, region.chr,
                         vref.sp, vref.ep, vref.refallele, vref.varallele,
                         vref.tcov,
                         vref.cov,
@@ -1008,20 +1015,21 @@ public class VarDict {
                         vref.leftseq.isEmpty() ? "0" : vref.leftseq,
                         vref.rightseq.isEmpty() ? "0" : vref.rightseq,
                         region.chr + ":" + region.start + "-" + region.end, vartype
-                        ));
+                ));
                 if (conf.debug) {
-                    out.println("\t" + vref.DEBUG);
+                    result.add("\t" + vref.DEBUG);
                 }
             }
 
         }
+        return result;
     }
 
     private static String[] retriveSubSeq(String fasta, String chr, int start, int end) throws IOException {
         try (IndexedFastaSequenceFile idx = new IndexedFastaSequenceFile(new File(fasta))) {
             ReferenceSequence seq = idx.getSubsequenceAt(chr, start, end);
             byte[] bases = seq.getBases();
-            return new String[] { ">" + chr + ":" + start + "-" + end, bases != null ? new String(bases) : "" };
+            return new String[]{">" + chr + ":" + start + "-" + end, bases != null ? new String(bases) : ""};
         }
     }
 
@@ -1047,13 +1055,14 @@ public class VarDict {
 
     /**
      * Increase count for given key
+     *
      * @param cnts map of counts
-     * @param key key to add count
-     * @param add amount to add
+     * @param key  key to add count
+     * @param add  amount to add
      */
-    @SuppressWarnings({ "unchecked", "rawtypes" })
+    @SuppressWarnings({"unchecked", "rawtypes"})
     private static void incCnt(Map cnts, Object key, int add) {
-        Integer integer = (Integer)cnts.get(key);
+        Integer integer = (Integer) cnts.get(key);
         if (integer == null) {
             cnts.put(key, add);
         } else {
@@ -1199,6 +1208,7 @@ public class VarDict {
 
         /**
          * Increment count for direction
+         *
          * @param dir true for forward strand, false for reverse strand
          */
         public void incDir(boolean dir) {
@@ -1210,6 +1220,7 @@ public class VarDict {
 
         /**
          * Decrement count for direction
+         *
          * @param dir true for forward strand, false for reverse strand
          */
         public void decDir(boolean dir) {
@@ -1221,6 +1232,7 @@ public class VarDict {
 
         /**
          * Get variant count for direction
+         *
          * @param dir true for forward strand, false for reverse strand
          * @return variant count
          */
@@ -1232,6 +1244,7 @@ public class VarDict {
 
         /**
          * Add count for direction
+         *
          * @param dir true for forward strand, false for reverse strand
          */
         public void addDir(boolean dir, int add) {
@@ -1243,6 +1256,7 @@ public class VarDict {
 
         /**
          * Subtract count for direction
+         *
          * @param dir true for forward strand, false for reverse strand
          */
         public void subDir(boolean dir, int sub) {
@@ -1325,7 +1339,7 @@ public class VarDict {
         }
 
         public SAMRecord read() throws IOException {
-            while(iterator.hasNext()) {
+            while (iterator.hasNext()) {
                 SAMRecord record = iterator.next();
                 if (filter != 0 && (record.getFlags() & filter) != 0) {
                     continue;
@@ -1345,21 +1359,22 @@ public class VarDict {
 
     /**
      * Construct a variant structure given a region and BAM files.
-     * @param region region
-     * @param bam BAM file name
-     * @param chrs map of chromosome lengths
-     * @param splice set of strings representing spliced regions
+     *
+     * @param region               region
+     * @param bam                  BAM file name
+     * @param chrs                 map of chromosome lengths
+     * @param splice               set of strings representing spliced regions
      * @param ampliconBasedCalling string of maximum_distance:minimum_overlap for amplicon based calling
-     * @param rlen max read length
-     * @param ref reference in a given region
-     * @param conf Configuration
+     * @param rlen                 max read length
+     * @param ref                  reference in a given region
+     * @param conf                 Configuration
      * @return Tuple of (noninsertion variant  structure, insertion variant structure, coverage, maxmimum read length)
      * @throws IOException
      */
-    static Tuple4<Map<Integer, Map<String, Variation>>, Map<Integer, Map<String, Variation>>, Map<Integer, Integer>, Integer> parseSAM(Region region, String bam,
-            Map<String, Integer> chrs, String sample, Set<String> splice, String ampliconBasedCalling, int rlen, Map<Integer, Character> ref, Configuration conf) throws IOException {
+    static Tuple4<Map<Integer, Map<String, Variation>>, Map<Integer, Map<String, Variation>>, Map<Integer, Integer>, Integer> parseSAM(Region region, List<SAMRecord> bam,
+                                                                                                                                       Map<String, Integer> chrs, String sample, Set<String> splice, String ampliconBasedCalling, int rlen, Map<Integer, Character> ref, Configuration conf) throws IOException {
 
-        String[] bams = bam.split(":");
+//        String[] bams = bam.split(":");
 
         Map<Integer, Map<String, Variation>> hash = new HashMap<>();
         Map<Integer, Map<String, Variation>> iHash = new HashMap<>();
@@ -1376,212 +1391,211 @@ public class VarDict {
             chr = region.chr.substring("chr".length());
         }
 
-        for (String bami : bams) {
-            String samfilter = conf.samfilter == null || conf.samfilter.isEmpty() ? "" : conf.samfilter;
-            try (SamView reader =  new SamView(bami, samfilter, region, conf.validationStringency)) {
-                //dup contains already seen reads. For each seen read dup contains either POS-RNEXT-PNEXT or POS-CIGAR (if next segment in template is unmapped).
-                Set<String> dup = new HashSet<>();
-                //position of first matching base (POS in SAM)
-                int dupp = -1;
-                SAMRecord record;
-                while ((record = reader.read()) != null) {
-                    if (conf.isDownsampling() && RND.nextDouble() <= conf.downsampling) {
+//        for (String bami : bams) {
+//            String samfilter = conf.samfilter == null || conf.samfilter.isEmpty() ? "" : conf.samfilter;
+//            try (SamView reader =  new SamView(bami, samfilter, region, conf.validationStringency)) {
+        //dup contains already seen reads. For each seen read dup contains either POS-RNEXT-PNEXT or POS-CIGAR (if next segment in template is unmapped).
+        Set<String> dup = new HashSet<>();
+        //position of first matching base (POS in SAM)
+        int dupp = -1;
+        for (SAMRecord record : bam) {
+            if (conf.isDownsampling() && RND.nextDouble() <= conf.downsampling) {
+                continue;
+            }
+
+            final String querySequence = record.getReadString();
+            final Flags flag = new Flags(record.getFlags());
+            final int mappingQuality = record.getMappingQuality();
+
+            if (conf.hasMappingQuality() && mappingQuality < conf.mappingQuality) { // ignore low mapping quality reads
+                continue;
+            }
+
+            if (flag.isNotPrimaryAlignment() && conf.samfilter != null) {
+                continue;
+            }
+
+            if (querySequence.length() == 1 && querySequence.charAt(0) == '*') {
+                continue;
+            }
+
+
+            final String mrnm = getMrnm(record);
+
+
+            // filter duplicated reads if option -t is set
+            if (conf.removeDuplicatedReads) {
+                if (record.getAlignmentStart() != dupp) {
+                    dup.clear();
+                }
+                if (record.getMateAlignmentStart() < 10) {
+                    String dupKey = record.getAlignmentStart() + "-" + mrnm + "-" + record.getMateAlignmentStart();
+                    if (dup.contains(dupKey)) {
+                        continue;
+                    }
+                    dup.add(dupKey);
+                    dupp = record.getAlignmentStart();
+                } else if (flag.isUnmappedMate()) {
+                    String dupKey = record.getAlignmentStart() + "-" + record.getCigarString();
+                    if (dup.contains(dupKey)) {
+                        continue;
+                    }
+                    dup.add(dupKey);
+                    dupp = record.getAlignmentStart();
+                }
+            }
+
+            final Cigar readCigar = record.getCigar();
+            final int indel = getInsertionDeletionLenght(readCigar);
+
+            int tnm = 0;
+            Integer nmi = record.getIntegerAttribute(SAMTag.NM.name());
+            if (nmi != null) { // number of mismatches. Don't use NM since it includes gaps, which can be from indels
+                tnm = nmi - indel;
+                if (tnm > conf.mismatch) { // edit distance - indels is the # of mismatches
+                    continue;
+                }
+            } else { //Skip the read if number of mismatches is not available
+                if (conf.y && !record.getCigarString().equals("*")) {
+                    System.err.println("No XM tag for mismatches. " + record.getSAMString());
+                }
+                continue;
+            }
+
+
+            final String queryQuality = record.getBaseQualityString();
+            final boolean isMrnmEqual = record.getReferenceName().equals(record.getMateReferenceName());
+
+            //number of mismatches
+            final int nm = tnm;
+            int n = 0; // keep track the read position, including softclipped
+            int p = 0; // keep track the position in the alignment, excluding softclipped
+            boolean dir = flag.isReverseStrand();
+            if (ampliconBasedCalling != null) {
+                String[] split = ampliconBasedCalling.split(":");
+                //distance to amplicon (specified in -a option)
+                int dis;
+                //overlap fraction (in -a option)
+                double ovlp;
+                try {
+                    dis = toInt(split[0]);
+                    ovlp = Double.parseDouble(split.length > 1 ? split[1] : "");
+                } catch (NumberFormatException e) {
+                    dis = 10;
+                    ovlp = 0.95;
+                }
+                //rlen3 holds sum of lengths of matched and deleted segments
+                int rlen3 = getAlignedLenght(readCigar); // The total aligned length, excluding soft-clipped
+                // bases and insertions
+                int segstart = record.getAlignmentStart();
+                int segend = segstart + rlen3 - 1;
+
+
+                if (readCigar.getCigarElement(0).getOperator() == CigarOperator.S) { //If read starts with soft-clipped sequence
+                    //Ignore reads that overlap with region of interest by fraction less than ovlp
+                    int ts1 = segstart > region.start ? segstart : region.start;
+                    int te1 = segend < region.end ? segend : region.end;
+                    if (Math.abs(ts1 - te1) / (double) (segend - segstart) > ovlp == false) {
+                        continue;
+                    }
+                } else if (readCigar.getCigarElement(readCigar.numCigarElements() - 1).getOperator() == CigarOperator.S) { //If read ends with contains soft-clipped sequence
+                    //Ignore reads that overlap with region of interest by fraction less than ovlp
+                    int ts1 = segstart > region.start ? segstart : region.start;
+                    int te1 = segend < region.end ? segend : region.end;
+                    if (Math.abs(te1 - ts1) / (double) (segend - segstart) > ovlp == false) {
                         continue;
                     }
 
-                    final String querySequence = record.getReadString();
-                    final Flags flag = new Flags(record.getFlags());
-                    final int mappingQuality = record.getMappingQuality();
-
-                    if (conf.hasMappingQuality() && mappingQuality < conf.mappingQuality) { // ignore low mapping quality reads
+                } else { //no soft-clipping
+                    //if RNEXT is identical to RNAME and TLEN is defined
+                    if (isMrnmEqual && record.getInferredInsertSize() != 0) {
+                        if (record.getInferredInsertSize() > 0) {
+                            segend = segstart + record.getInferredInsertSize() - 1;
+                        } else {
+                            segstart = record.getMateAlignmentStart();
+                            segend = record.getMateAlignmentStart() - record.getInferredInsertSize() - 1;
+                        }
+                    }
+                    // No segment overlapping test since samtools should take care of it
+                    int ts1 = segstart > region.start ? segstart : region.start;
+                    int te1 = segend < region.end ? segend : region.end;
+                    //ignore reads that are more than dis from region of interest and overlap is less than ovlp
+                    if ((abs(segstart - region.start) > dis || abs(segend - region.end) > dis)
+                            || abs((ts1 - te1) / (double) (segend - segstart)) <= ovlp) {
                         continue;
                     }
+                }
+            }
+            if (flag.isUnmappedMate()) {
+                // to be implemented
+            } else {
+                if (isMrnmEqual) {
+                    //if 'SA' tag (supplementary alignment) is present
+                    if (record.getStringAttribute(SAMTag.SA.name()) != null) {
+                        if (flag.isSupplementaryAlignment()) { // the supplementary alignment
+                            continue; // Ignore the supplementary for now so that it won't skew the coverage
+                        }
+                    }
+                }
 
-                    if (flag.isNotPrimaryAlignment() && conf.samfilter != null) {
+            }
+            final int position;
+            final Cigar cigar;
+
+            if (conf.performLocalRealignment) {
+                // Modify the CIGAR for potential mis-alignment for indels at the end of reads to softclipping and let VarDict's
+                // algorithm to figure out indels
+                Tuple2<Integer, String> mc = modifyCigar(indel, ref, record.getAlignmentStart(), record.getCigarString(), querySequence, queryQuality, conf.lowqual);
+                position = mc._1;
+                cigar = TextCigarCodec.decode(mc._2);
+            } else {
+                position = record.getAlignmentStart();
+                cigar = record.getCigar();
+            }
+
+            //adjusted start position
+            int start = position;
+            int offset = 0;
+            // Only match and insertion counts toward read length
+            // For total length, including soft-clipped bases
+            int rlen1 = getMatchInsertionLenght(cigar); // The read length for matched bases
+            if (conf.minmatch != 0 && rlen1 < conf.minmatch) {
+                continue;
+            }
+            int rlen2 = getSoftClippedLenght(cigar); // The total length, including soft-clipped bases
+            if (rlen2 > rlen) { // Determine the read length
+                rlen = rlen2;
+            }
+
+            //Loop over CIGAR records
+            for (int ci = 0; ci < cigar.numCigarElements(); ci++) {
+
+                //length of segment in CIGAR
+                int m = cigar.getCigarElement(ci).getLength();
+
+                //letter from CIGAR
+                final CigarOperator operator = getCigarOperator(cigar, ci);
+
+                switch (operator) {
+                    case N: //N in CIGAR - skipped region from reference
+                        //Skip the region and add string start-end to %SPLICE
+                        String key = (start - 1) + "-" + (start + m - 1);
+                        splice.add(key);
+                        int[] cnt = spliceCnt.get(key);
+                        if (cnt == null) {
+                            cnt = new int[]{0};
+                            spliceCnt.put(key, cnt);
+                        }
+                        cnt[0]++;
+
+                        start += m;
+                        offset = 0;
                         continue;
-                    }
 
-                    if (querySequence.length() == 1 && querySequence.charAt(0) == '*') {
-                        continue;
-                    }
-
-
-                    final String mrnm = getMrnm(record);
-
-
-                    // filter duplicated reads if option -t is set
-                    if (conf.removeDuplicatedReads) {
-                        if (record.getAlignmentStart() != dupp) {
-                            dup.clear();
-                        }
-                        if (record.getMateAlignmentStart() < 10) {
-                            String dupKey = record.getAlignmentStart() + "-" + mrnm + "-" + record.getMateAlignmentStart();
-                            if (dup.contains(dupKey)) {
-                                continue;
-                            }
-                            dup.add(dupKey);
-                            dupp = record.getAlignmentStart();
-                        } else if (flag.isUnmappedMate()) {
-                            String dupKey = record.getAlignmentStart() + "-" + record.getCigarString();
-                            if (dup.contains(dupKey)) {
-                                continue;
-                            }
-                            dup.add(dupKey);
-                            dupp = record.getAlignmentStart();
-                        }
-                    }
-
-                    final Cigar readCigar = record.getCigar();
-                    final int indel = getInsertionDeletionLenght(readCigar);
-
-                    int tnm = 0;
-                    Integer nmi = record.getIntegerAttribute(SAMTag.NM.name());
-                    if (nmi != null) { // number of mismatches. Don't use NM since it includes gaps, which can be from indels
-                        tnm = nmi - indel;
-                        if (tnm > conf.mismatch) { // edit distance - indels is the # of mismatches
-                            continue;
-                        }
-                    } else { //Skip the read if number of mismatches is not available
-                        if (conf.y && !record.getCigarString().equals("*")) {
-                            System.err.println("No XM tag for mismatches. " + record.getSAMString());
-                        }
-                        continue;
-                    }
-
-
-                    final String queryQuality = record.getBaseQualityString();
-                    final boolean isMrnmEqual = record.getReferenceName().equals(record.getMateReferenceName());
-
-                    //number of mismatches
-                    final int nm = tnm;
-                    int n = 0; // keep track the read position, including softclipped
-                    int p = 0; // keep track the position in the alignment, excluding softclipped
-                    boolean dir = flag.isReverseStrand();
-                    if (ampliconBasedCalling != null) {
-                        String[] split = ampliconBasedCalling.split(":");
-                        //distance to amplicon (specified in -a option)
-                        int dis;
-                        //overlap fraction (in -a option)
-                        double ovlp;
-                        try {
-                            dis = toInt(split[0]);
-                            ovlp = Double.parseDouble(split.length > 1 ? split[1] : "");
-                        } catch (NumberFormatException e) {
-                            dis = 10;
-                            ovlp = 0.95;
-                        }
-                        //rlen3 holds sum of lengths of matched and deleted segments
-                        int rlen3 = getAlignedLenght(readCigar); // The total aligned length, excluding soft-clipped
-                                                                                // bases and insertions
-                        int segstart = record.getAlignmentStart();
-                        int segend = segstart + rlen3 - 1;
-
-
-                        if (readCigar.getCigarElement(0).getOperator() == CigarOperator.S) { //If read starts with soft-clipped sequence
-                            //Ignore reads that overlap with region of interest by fraction less than ovlp
-                            int ts1 = segstart > region.start ? segstart : region.start;
-                            int te1 = segend < region.end ? segend : region.end;
-                            if (Math.abs(ts1 - te1) / (double)(segend - segstart) > ovlp == false) {
-                                continue;
-                            }
-                        } else if (readCigar.getCigarElement(readCigar.numCigarElements() - 1).getOperator() == CigarOperator.S) { //If read ends with contains soft-clipped sequence
-                            //Ignore reads that overlap with region of interest by fraction less than ovlp
-                            int ts1 = segstart > region.start ? segstart : region.start;
-                            int te1 = segend < region.end ? segend : region.end;
-                            if (Math.abs(te1 - ts1) / (double)(segend - segstart) > ovlp == false) {
-                                continue;
-                            }
-
-                        } else { //no soft-clipping
-                            //if RNEXT is identical to RNAME and TLEN is defined
-                            if ( isMrnmEqual && record.getInferredInsertSize() != 0) {
-                                if (record.getInferredInsertSize() > 0) {
-                                    segend = segstart + record.getInferredInsertSize() - 1;
-                                } else {
-                                    segstart = record.getMateAlignmentStart();
-                                    segend = record.getMateAlignmentStart() - record.getInferredInsertSize() - 1;
-                                }
-                            }
-                            // No segment overlapping test since samtools should take care of it
-                            int ts1 = segstart > region.start ? segstart : region.start;
-                            int te1 = segend < region.end ? segend : region.end;
-                            //ignore reads that are more than dis from region of interest and overlap is less than ovlp
-                            if ((abs(segstart - region.start) > dis || abs(segend - region.end) > dis)
-                                    || abs((ts1 - te1) / (double)(segend - segstart)) <= ovlp) {
-                                continue;
-                            }
-                        }
-                    }
-                    if (flag.isUnmappedMate()) {
-                        // to be implemented
-                    } else {
-                        if (isMrnmEqual) {
-                            //if 'SA' tag (supplementary alignment) is present
-                            if (record.getStringAttribute(SAMTag.SA.name()) != null) {
-                                if (flag.isSupplementaryAlignment()) { // the supplementary alignment
-                                    continue; // Ignore the supplementary for now so that it won't skew the coverage
-                                }
-                            }
-                        }
-
-                    }
-                    final int position;
-                    final Cigar cigar;
-
-                    if (conf.performLocalRealignment) {
-                        // Modify the CIGAR for potential mis-alignment for indels at the end of reads to softclipping and let VarDict's
-                        // algorithm to figure out indels
-                        Tuple2<Integer, String> mc = modifyCigar(indel, ref, record.getAlignmentStart(), record.getCigarString(), querySequence, queryQuality, conf.lowqual);
-                        position = mc._1;
-                        cigar = TextCigarCodec.decode(mc._2);
-                    } else {
-                        position = record.getAlignmentStart();
-                        cigar = record.getCigar();
-                    }
-
-                    //adjusted start position
-                    int start = position;
-                    int offset = 0;
-                     // Only match and insertion counts toward read length
-                     // For total length, including soft-clipped bases
-                    int rlen1 = getMatchInsertionLenght(cigar); // The read length for matched bases
-                    if ( conf.minmatch != 0 && rlen1 < conf.minmatch) {
-                        continue;
-                    }
-                    int rlen2 = getSoftClippedLenght(cigar); // The total length, including soft-clipped bases
-                    if (rlen2 > rlen) { // Determine the read length
-                        rlen = rlen2;
-                    }
-
-                    //Loop over CIGAR records
-                    for (int ci = 0; ci < cigar.numCigarElements(); ci++) {
-
-                        //length of segment in CIGAR
-                        int m =  cigar.getCigarElement(ci).getLength();
-
-                        //letter from CIGAR
-                        final CigarOperator operator = getCigarOperator(cigar, ci);
-
-                        switch (operator) {
-                            case N: //N in CIGAR - skipped region from reference
-                                //Skip the region and add string start-end to %SPLICE
-                                String key = (start - 1) + "-" + (start + m - 1);
-                                splice.add(key);
-                                int[] cnt = spliceCnt.get(key);
-                                if (cnt == null) {
-                                    cnt = new int[] { 0 };
-                                    spliceCnt.put(key, cnt);
-                                }
-                                cnt[0]++;
-
-                                start += m;
-                                offset = 0;
-                                continue;
-
-                            case S:
-                                //First record in CIGAR
-                                if (ci == 0) { // 5' soft clipped
-                                    // align softclipped but matched sequences due to mis-softclipping
+                    case S:
+                        //First record in CIGAR
+                        if (ci == 0) { // 5' soft clipped
+                            // align softclipped but matched sequences due to mis-softclipping
                                     /*
                                     Conditions:
                                     1). segment length > 1
@@ -1590,66 +1604,66 @@ public class VarDict {
                                     4). reference and read bases match
                                     5). read quality is more than 10
                                      */
-                                    while (m - 1 >= 0 && start - 1 > 0 && start - 1 <= chrs.get(chr)
-                                            && isHasAndEquals(querySequence.charAt(m - 1), ref, start - 1)
-                                            && queryQuality.charAt(m - 1) - 33 > 10) {
-                                        //create variant if it is not present
-                                        Variation variation = getVariation(hash, start - 1, ref.get(start - 1).toString());
-                                        //add count
-                                        addCnt(variation, dir, m, queryQuality.charAt(m - 1) - 33, mappingQuality, nm, conf.goodq);
-                                        //increase coverage
-                                        incCnt(cov, start - 1, 1);
-                                        start--;
-                                        m--;
+                            while (m - 1 >= 0 && start - 1 > 0 && start - 1 <= chrs.get(chr)
+                                    && isHasAndEquals(querySequence.charAt(m - 1), ref, start - 1)
+                                    && queryQuality.charAt(m - 1) - 33 > 10) {
+                                //create variant if it is not present
+                                Variation variation = getVariation(hash, start - 1, ref.get(start - 1).toString());
+                                //add count
+                                addCnt(variation, dir, m, queryQuality.charAt(m - 1) - 33, mappingQuality, nm, conf.goodq);
+                                //increase coverage
+                                incCnt(cov, start - 1, 1);
+                                start--;
+                                m--;
+                            }
+                            if (m > 0) { //If there remains a soft-clipped sequence at the beginning (not everything was matched)
+                                int q = 0; //sum of read qualities (to get mean quality)
+                                int qn = 0; //number of quality figures
+                                int lowqcnt = 0; //number of low-quality bases in the sequence
+
+                                //loop over remaining soft-clipped sequence
+                                for (int si = m - 1; si >= 0; si--) {
+                                    //stop if unknown base (N - any of ATGC) is found
+                                    if (querySequence.charAt(si) == 'N') {
+                                        break;
                                     }
-                                    if (m > 0) { //If there remains a soft-clipped sequence at the beginning (not everything was matched)
-                                        int q = 0; //sum of read qualities (to get mean quality)
-                                        int qn = 0; //number of quality figures
-                                        int lowqcnt = 0; //number of low-quality bases in the sequence
+                                    //tq - base quality
+                                    int tq = queryQuality.charAt(si) - 33;
+                                    if (tq <= 12)
+                                        lowqcnt++;
+                                    //Stop if a low-quality base is found
+                                    if (lowqcnt > 1)
+                                        break;
 
-                                        //loop over remaining soft-clipped sequence
-                                        for (int si = m - 1; si >= 0; si--) {
-                                            //stop if unknown base (N - any of ATGC) is found
-                                            if (querySequence.charAt(si) == 'N') {
-                                                break;
-                                            }
-                                            //tq - base quality
-                                            int tq = queryQuality.charAt(si) - 33;
-                                            if (tq <= 12)
-                                                lowqcnt++;
-                                            //Stop if a low-quality base is found
-                                            if (lowqcnt > 1)
-                                                break;
-
-                                            q += tq;
-                                            qn++;
-                                        }
-                                        //If we have at least 1 high-quality soft-clipped base within conf.buffer of region of interest
-                                        if (qn >= 1 && qn > lowqcnt && start >= region.start - conf.buffer && start <= region.end + conf.buffer) {
-                                            //add record to $sclip5
-                                            Sclip sclip = sclip5.get(start);
-                                            if (sclip == null) {
-                                                sclip = new Sclip();
-                                                sclip5.put(start, sclip);
-                                            }
-                                            for (int si = m - 1; m - si <= qn; si--) {
-                                                Character ch = querySequence.charAt(si);
-                                                int idx = m - 1 - si;
-                                                Map<Character, Integer> cnts = sclip.nt.get(idx);
-                                                if (cnts == null) {
-                                                    cnts = new LinkedHashMap<>();
-                                                    sclip.nt.put(idx, cnts);
-                                                }
-                                                incCnt(cnts, ch, 1);
-                                                Variation seqVariation = getVariationFromSeq(sclip, idx, ch);
-                                                addCnt(seqVariation, dir, si - (m - qn), queryQuality.charAt(si) - 33, mappingQuality, nm, conf.goodq);
-                                            }
-                                            addCnt(sclip, dir, m, q / (double)qn, mappingQuality, nm, conf.goodq);
-                                        }
-
+                                    q += tq;
+                                    qn++;
+                                }
+                                //If we have at least 1 high-quality soft-clipped base within conf.buffer of region of interest
+                                if (qn >= 1 && qn > lowqcnt && start >= region.start - conf.buffer && start <= region.end + conf.buffer) {
+                                    //add record to $sclip5
+                                    Sclip sclip = sclip5.get(start);
+                                    if (sclip == null) {
+                                        sclip = new Sclip();
+                                        sclip5.put(start, sclip);
                                     }
-                                    m = cigar.getCigarElement(ci).getLength();
-                                } else if (ci == cigar.numCigarElements() - 1) { // 3' soft clipped
+                                    for (int si = m - 1; m - si <= qn; si--) {
+                                        Character ch = querySequence.charAt(si);
+                                        int idx = m - 1 - si;
+                                        Map<Character, Integer> cnts = sclip.nt.get(idx);
+                                        if (cnts == null) {
+                                            cnts = new LinkedHashMap<>();
+                                            sclip.nt.put(idx, cnts);
+                                        }
+                                        incCnt(cnts, ch, 1);
+                                        Variation seqVariation = getVariationFromSeq(sclip, idx, ch);
+                                        addCnt(seqVariation, dir, si - (m - qn), queryQuality.charAt(si) - 33, mappingQuality, nm, conf.goodq);
+                                    }
+                                    addCnt(sclip, dir, m, q / (double) qn, mappingQuality, nm, conf.goodq);
+                                }
+
+                            }
+                            m = cigar.getCigarElement(ci).getLength();
+                        } else if (ci == cigar.numCigarElements() - 1) { // 3' soft clipped
                                     /*
                                     Conditions:
                                     1). read position is less than sequence length
@@ -1657,89 +1671,89 @@ public class VarDict {
                                     3). reference base at start matches read base at n
                                     4). read quality is more than 10
                                      */
-                                    while (n < querySequence.length()
-                                            && isHasAndEquals(querySequence.charAt(n), ref, start)
-                                            && queryQuality.charAt(n) - 33 > 10) {
-                                        //initialize entry in $hash if not present
-                                        Variation variation = getVariation(hash, start, ref.get(start).toString());
-                                        //add count
-                                        addCnt(variation, dir, rlen2 - p, queryQuality.charAt(n) - 33, mappingQuality, nm, conf.goodq);
-                                        //add coverage
-                                        incCnt(cov, start, 1);
-                                        n++;
-                                        start++;
-                                        m--;
-                                        p++;
+                            while (n < querySequence.length()
+                                    && isHasAndEquals(querySequence.charAt(n), ref, start)
+                                    && queryQuality.charAt(n) - 33 > 10) {
+                                //initialize entry in $hash if not present
+                                Variation variation = getVariation(hash, start, ref.get(start).toString());
+                                //add count
+                                addCnt(variation, dir, rlen2 - p, queryQuality.charAt(n) - 33, mappingQuality, nm, conf.goodq);
+                                //add coverage
+                                incCnt(cov, start, 1);
+                                n++;
+                                start++;
+                                m--;
+                                p++;
+                            }
+                            if (querySequence.length() - n > 0) { //If there remains a soft-clipped sequence at the end (not everything was matched)
+                                int q = 0; //sum of read qualities (to get mean quality)
+                                int qn = 0; //number of quality figures
+                                int lowqcnt = 0; //number of low-quality bases in the sequence
+                                for (int si = 0; si < m; si++) { //loop over remaining soft-clipped sequence
+                                    if (querySequence.charAt(n + si) == 'N') { //stop if unknown base (N - any of ATGC) is found
+                                        break;
                                     }
-                                    if (querySequence.length() - n > 0) { //If there remains a soft-clipped sequence at the end (not everything was matched)
-                                        int q = 0; //sum of read qualities (to get mean quality)
-                                        int qn = 0; //number of quality figures
-                                        int lowqcnt = 0; //number of low-quality bases in the sequence
-                                        for (int si = 0; si < m; si++) { //loop over remaining soft-clipped sequence
-                                            if (querySequence.charAt(n + si) == 'N') { //stop if unknown base (N - any of ATGC) is found
-                                                break;
-                                            }
-                                            int tq = queryQuality.charAt(n + si) - 33; //base quality
-                                            if (tq <= 12) {
-                                                lowqcnt++;
-                                            }
-                                            //Stop if a low-quality base is found
-                                            if (lowqcnt > 1) {
-                                                break;
-                                            }
-                                            q += tq;
-                                            qn++;
-                                        }
-                                        //If we have at least 1 high-quality soft-clipped base within conf.buffer of region of interest
-                                        if (qn >= 1 && qn > lowqcnt && start >= region.start - conf.buffer && start <= region.end + conf.buffer) {
-                                            //add record to $sclip3
-                                            Sclip sclip = sclip3.get(start);
-                                            if (sclip == null) {
-                                                sclip = new Sclip();
-                                                sclip3.put(start, sclip);
-                                            }
-                                            for (int si = 0; si < qn; si++) {
-                                                Character ch = querySequence.charAt(n + si);
-                                                int idx = si;
-                                                Map<Character, Integer> cnts = sclip.nt.get(idx);
-                                                if (cnts == null) {
-                                                    cnts = new HashMap<>();
-                                                    sclip.nt.put(idx, cnts);
-                                                }
-                                                incCnt(cnts, ch, 1);
-                                                Variation variation = getVariationFromSeq(sclip, idx, ch);
-                                                addCnt(variation, dir, qn - si, queryQuality.charAt(n + si) - 33, mappingQuality, nm, conf.goodq);
-                                            }
-                                            addCnt(sclip, dir, m, q / (double)qn, mappingQuality, nm, conf.goodq);
-                                        }
-
+                                    int tq = queryQuality.charAt(n + si) - 33; //base quality
+                                    if (tq <= 12) {
+                                        lowqcnt++;
                                     }
-
+                                    //Stop if a low-quality base is found
+                                    if (lowqcnt > 1) {
+                                        break;
+                                    }
+                                    q += tq;
+                                    qn++;
                                 }
-                                //move read position by m (length of segment in CIGAR)
-                                n += m;
-                                offset = 0;
-                                start = position; // had to reset the start due to softclipping adjustment
-                                continue;
-                            case H: //Hard clipping - skip
-                                offset = 0;
-                                continue;
-                            case I: { //Insertion
-                                offset = 0;
-                                //inserted segment of read sequence
-                                StringBuilder s = new StringBuilder(substr(querySequence, n, m));
-                                //quality of this segment
-                                StringBuilder q = new StringBuilder(substr(queryQuality, n, m));
-                                //sequence to be appended if next segment is matched
-                                String ss = "";
+                                //If we have at least 1 high-quality soft-clipped base within conf.buffer of region of interest
+                                if (qn >= 1 && qn > lowqcnt && start >= region.start - conf.buffer && start <= region.end + conf.buffer) {
+                                    //add record to $sclip3
+                                    Sclip sclip = sclip3.get(start);
+                                    if (sclip == null) {
+                                        sclip = new Sclip();
+                                        sclip3.put(start, sclip);
+                                    }
+                                    for (int si = 0; si < qn; si++) {
+                                        Character ch = querySequence.charAt(n + si);
+                                        int idx = si;
+                                        Map<Character, Integer> cnts = sclip.nt.get(idx);
+                                        if (cnts == null) {
+                                            cnts = new HashMap<>();
+                                            sclip.nt.put(idx, cnts);
+                                        }
+                                        incCnt(cnts, ch, 1);
+                                        Variation variation = getVariationFromSeq(sclip, idx, ch);
+                                        addCnt(variation, dir, qn - si, queryQuality.charAt(n + si) - 33, mappingQuality, nm, conf.goodq);
+                                    }
+                                    addCnt(sclip, dir, m, q / (double) qn, mappingQuality, nm, conf.goodq);
+                                }
 
-                                // For multiple indels within 10bp
+                            }
 
-                                //offset for read position if next segment is matched
-                                int multoffs = 0;
-                                //offset for reference position if next segment is matched
-                                int multoffp = 0;
-                                int nmoff = 0;
+                        }
+                        //move read position by m (length of segment in CIGAR)
+                        n += m;
+                        offset = 0;
+                        start = position; // had to reset the start due to softclipping adjustment
+                        continue;
+                    case H: //Hard clipping - skip
+                        offset = 0;
+                        continue;
+                    case I: { //Insertion
+                        offset = 0;
+                        //inserted segment of read sequence
+                        StringBuilder s = new StringBuilder(substr(querySequence, n, m));
+                        //quality of this segment
+                        StringBuilder q = new StringBuilder(substr(queryQuality, n, m));
+                        //sequence to be appended if next segment is matched
+                        String ss = "";
+
+                        // For multiple indels within 10bp
+
+                        //offset for read position if next segment is matched
+                        int multoffs = 0;
+                        //offset for reference position if next segment is matched
+                        int multoffp = 0;
+                        int nmoff = 0;
 
                                 /*
                                 Condition:
@@ -1749,128 +1763,128 @@ public class VarDict {
                                 4). CIGAR string has one more entry after next one
                                 5). this entry is insertion or deletion
                                  */
-                                if (conf.performLocalRealignment && cigar.numCigarElements() > ci + 2
-                                        && cigar.getCigarElement(ci + 1).getLength() <= conf.vext
-                                        && cigar.getCigarElement(ci + 1).getOperator() == CigarOperator.M
-                                        && (cigar.getCigarElement(ci + 2).getOperator()  == CigarOperator.I
-                                            || cigar.getCigarElement(ci + 2).getOperator()  == CigarOperator.D)) {
+                        if (conf.performLocalRealignment && cigar.numCigarElements() > ci + 2
+                                && cigar.getCigarElement(ci + 1).getLength() <= conf.vext
+                                && cigar.getCigarElement(ci + 1).getOperator() == CigarOperator.M
+                                && (cigar.getCigarElement(ci + 2).getOperator() == CigarOperator.I
+                                || cigar.getCigarElement(ci + 2).getOperator() == CigarOperator.D)) {
 
-                                    int mLen = cigar.getCigarElement(ci + 1).getLength();
-                                    int indelLen = cigar.getCigarElement(ci + 2).getLength();
-                                    CigarOperator indelOperator = cigar.getCigarElement(ci + 2).getOperator();
-                                    //append to s '#' and part of read sequence corresponding to next CIGAR segment (matched one)
-                                    s.append("#").append(substr(querySequence, n + m, mLen));
-                                    //append next segment quality to q
-                                    q.append(substr(queryQuality, n + m, mLen));
+                            int mLen = cigar.getCigarElement(ci + 1).getLength();
+                            int indelLen = cigar.getCigarElement(ci + 2).getLength();
+                            CigarOperator indelOperator = cigar.getCigarElement(ci + 2).getOperator();
+                            //append to s '#' and part of read sequence corresponding to next CIGAR segment (matched one)
+                            s.append("#").append(substr(querySequence, n + m, mLen));
+                            //append next segment quality to q
+                            q.append(substr(queryQuality, n + m, mLen));
 
-                                    //if an insertion is two segments ahead, append '^' + part of sequence corresponding to next-next segment
-                                    //otherwise (deletion) append '^' + length of a next-next segment
-                                    s.append('^').append(indelOperator == CigarOperator.I ? substr(querySequence, n + m + mLen, indelLen) : indelLen);
-                                    //if an insertion is two segments ahead, append part of quality string sequence corresponding to next-next segment
-                                    //otherwise (deletion) append first quality score of next segment
-                                    q.append(indelOperator == CigarOperator.I ? substr(queryQuality, n + m + mLen, indelLen) : queryQuality.charAt(n + m + mLen));
+                            //if an insertion is two segments ahead, append '^' + part of sequence corresponding to next-next segment
+                            //otherwise (deletion) append '^' + length of a next-next segment
+                            s.append('^').append(indelOperator == CigarOperator.I ? substr(querySequence, n + m + mLen, indelLen) : indelLen);
+                            //if an insertion is two segments ahead, append part of quality string sequence corresponding to next-next segment
+                            //otherwise (deletion) append first quality score of next segment
+                            q.append(indelOperator == CigarOperator.I ? substr(queryQuality, n + m + mLen, indelLen) : queryQuality.charAt(n + m + mLen));
 
-                                    //add length of next segment to both multoffs and multoffp
-                                    //add length of next-next segment to multoffp (for insertion) or to multoffs (for deletion)
-                                    multoffs += mLen + (indelOperator == CigarOperator.D ? indelLen : 0);
-                                    multoffp += mLen + (indelOperator == CigarOperator.I ? indelLen : 0);
+                            //add length of next segment to both multoffs and multoffp
+                            //add length of next-next segment to multoffp (for insertion) or to multoffs (for deletion)
+                            multoffs += mLen + (indelOperator == CigarOperator.D ? indelLen : 0);
+                            multoffp += mLen + (indelOperator == CigarOperator.I ? indelLen : 0);
 
-                                    int ci6 = cigar.numCigarElements() > ci + 3 ? cigar.getCigarElement(ci + 3).getLength() : 0;
-                                    if (ci6 != 0 && cigar.getCigarElement(ci + 3).getOperator()  == CigarOperator.M) {
-                                        Tuple4<Integer, String, String, Integer> tpl = finndOffset(start + multoffs,
-                                                n + m + multoffp, ci6, querySequence, queryQuality, ref, cov, conf.vext, conf.goodq);
-                                        offset = tpl._1;
-                                        ss = tpl._2;
-                                        q.append(tpl._3);
-                                    }
-                                    //skip 2 CIGAR segments
-                                    ci += 2;
-                                } else {
+                            int ci6 = cigar.numCigarElements() > ci + 3 ? cigar.getCigarElement(ci + 3).getLength() : 0;
+                            if (ci6 != 0 && cigar.getCigarElement(ci + 3).getOperator() == CigarOperator.M) {
+                                Tuple4<Integer, String, String, Integer> tpl = finndOffset(start + multoffs,
+                                        n + m + multoffp, ci6, querySequence, queryQuality, ref, cov, conf.vext, conf.goodq);
+                                offset = tpl._1;
+                                ss = tpl._2;
+                                q.append(tpl._3);
+                            }
+                            //skip 2 CIGAR segments
+                            ci += 2;
+                        } else {
                                     /*
                                     Condition:
                                     1). CIGAR string has next entry
                                     2). next CIGAR segment is matched
                                      */
-                                    if (conf.performLocalRealignment && cigar.numCigarElements() > ci + 1 && cigar.getCigarElement(ci + 1).getOperator() == CigarOperator.M) {
-                                        int vsn = 0;
-                                        //Loop over next CIGAR segment (no more than conf.vext bases ahead)
-                                        for (int vi = 0; vsn <= conf.vext && vi < cigar.getCigarElement(ci + 1).getLength(); vi++) {
-                                            //If base is unknown, exit loop
-                                            if (querySequence.charAt(n + m + vi) == 'N') {
-                                                break;
-                                            }
-                                            //If base quality is less than conf.goodq, exit loop
-                                            if (queryQuality.charAt(n + m + vi) - 33 < conf.goodq) {
-                                                break;
-                                            }
-                                            //If reference sequence has base at this position and it matches read base, update offset
-                                            if (ref.containsKey(start + vi)) {
-                                                if (isNotEquals(querySequence.charAt(n + m + vi), ref.get(start + vi))) {
-                                                    offset = vi + 1;
-                                                    vsn = 0;
-                                                } else {
-                                                    vsn++;
-                                                }
-                                            }
-                                        }
-                                        if (offset != 0) { //If next CIGAR segment has good matching base
-                                            //Append first offset bases of next segment to ss and q
-                                            ss += substr(querySequence, n + m, offset);
-                                            q.append(substr(queryQuality, n + m, offset));
-                                            //Increase coverage for positions corresponding to first offset bases of next segment
-                                            for (int osi = 0; osi < offset; osi++) {
-                                                incCnt(cov, start + osi, 1);
-                                            }
+                            if (conf.performLocalRealignment && cigar.numCigarElements() > ci + 1 && cigar.getCigarElement(ci + 1).getOperator() == CigarOperator.M) {
+                                int vsn = 0;
+                                //Loop over next CIGAR segment (no more than conf.vext bases ahead)
+                                for (int vi = 0; vsn <= conf.vext && vi < cigar.getCigarElement(ci + 1).getLength(); vi++) {
+                                    //If base is unknown, exit loop
+                                    if (querySequence.charAt(n + m + vi) == 'N') {
+                                        break;
+                                    }
+                                    //If base quality is less than conf.goodq, exit loop
+                                    if (queryQuality.charAt(n + m + vi) - 33 < conf.goodq) {
+                                        break;
+                                    }
+                                    //If reference sequence has base at this position and it matches read base, update offset
+                                    if (ref.containsKey(start + vi)) {
+                                        if (isNotEquals(querySequence.charAt(n + m + vi), ref.get(start + vi))) {
+                                            offset = vi + 1;
+                                            vsn = 0;
+                                        } else {
+                                            vsn++;
                                         }
                                     }
                                 }
-
-                                //offset should be reset to 0 on every loop, so it is non-zero only if previous part of code was executed
-                                //Append '&' and $ss to s if next segment has good matching base
-                                if (offset > 0) {
-                                    s.append("&").append(ss);
+                                if (offset != 0) { //If next CIGAR segment has good matching base
+                                    //Append first offset bases of next segment to ss and q
+                                    ss += substr(querySequence, n + m, offset);
+                                    q.append(substr(queryQuality, n + m, offset));
+                                    //Increase coverage for positions corresponding to first offset bases of next segment
+                                    for (int osi = 0; osi < offset; osi++) {
+                                        incCnt(cov, start + osi, 1);
+                                    }
                                 }
+                            }
+                        }
 
-                                //If start of the segment is within region of interest and the segment does not have unknown bases
-                                if (start - 1 >= region.start && start - 1 <= region.end && !s.toString().contains("N")) {
-                                    //add '+' + s to insertions at start - 1
-                                    incCnt(getOrElse(ins, start - 1, new HashMap<String, Integer>()), "+" + s, 1);
-                                    //add insertion to table of variations
-                                    Variation hv = getVariation(iHash, start - 1, "+" + s); //variant structure for this insertion
-                                    hv.incDir(dir);
-                                    //add count
-                                    hv.cnt++;
-                                    //minimum of positions from start of read and end of read
-                                    int tp = p < rlen1 - p ? p + 1 : rlen1 - p;
+                        //offset should be reset to 0 on every loop, so it is non-zero only if previous part of code was executed
+                        //Append '&' and $ss to s if next segment has good matching base
+                        if (offset > 0) {
+                            s.append("&").append(ss);
+                        }
 
-                                    //mean read quality of the segment
-                                    double tmpq = 0;
-                                    for (int i = 0; i < q.length(); i++) {
-                                        tmpq += q.charAt(i) - 33;
-                                    }
-                                    tmpq = tmpq / q.length();
+                        //If start of the segment is within region of interest and the segment does not have unknown bases
+                        if (start - 1 >= region.start && start - 1 <= region.end && !s.toString().contains("N")) {
+                            //add '+' + s to insertions at start - 1
+                            incCnt(getOrElse(ins, start - 1, new HashMap<String, Integer>()), "+" + s, 1);
+                            //add insertion to table of variations
+                            Variation hv = getVariation(iHash, start - 1, "+" + s); //variant structure for this insertion
+                            hv.incDir(dir);
+                            //add count
+                            hv.cnt++;
+                            //minimum of positions from start of read and end of read
+                            int tp = p < rlen1 - p ? p + 1 : rlen1 - p;
 
-                                    //pstd is a flag that is 1 if the variant is covered by at least 2 read segments with different positions
-                                    if (hv.pstd == false && hv.pp != 0 && tp != hv.pp) {
-                                        hv.pstd = true;
-                                    }
-                                    //qstd is a flag that is 1 if the variant is covered by at least 2 segment reads with different qualities
-                                    if (hv.qstd == false && hv.pq != 0 && tmpq != hv.pq) {
-                                        hv.qstd = true;
-                                    }
-                                    hv.pmean += tp;
-                                    hv.qmean += tmpq;
-                                    hv.Qmean += mappingQuality;
-                                    hv.pp = tp;
-                                    hv.pq = tmpq;
-                                    if (tmpq >= conf.goodq) {
-                                        hv.hicnt++;
-                                    } else {
-                                        hv.locnt++;
-                                    }
-                                    hv.nm += nm - nmoff;
+                            //mean read quality of the segment
+                            double tmpq = 0;
+                            for (int i = 0; i < q.length(); i++) {
+                                tmpq += q.charAt(i) - 33;
+                            }
+                            tmpq = tmpq / q.length();
 
-                                    // Adjust the reference count for insertion reads
+                            //pstd is a flag that is 1 if the variant is covered by at least 2 read segments with different positions
+                            if (hv.pstd == false && hv.pp != 0 && tp != hv.pp) {
+                                hv.pstd = true;
+                            }
+                            //qstd is a flag that is 1 if the variant is covered by at least 2 segment reads with different qualities
+                            if (hv.qstd == false && hv.pq != 0 && tmpq != hv.pq) {
+                                hv.qstd = true;
+                            }
+                            hv.pmean += tp;
+                            hv.qmean += tmpq;
+                            hv.Qmean += mappingQuality;
+                            hv.pp = tp;
+                            hv.pq = tmpq;
+                            if (tmpq >= conf.goodq) {
+                                hv.hicnt++;
+                            } else {
+                                hv.locnt++;
+                            }
+                            hv.nm += nm - nmoff;
+
+                            // Adjust the reference count for insertion reads
 
                                     /*
                                     Condition:
@@ -1878,62 +1892,62 @@ public class VarDict {
                                     2). hash contains variant structure for the position
                                     3). read base at position n-1 matches reference at start-1
                                      */
-                                    if (getVariationMaybe(hash, start - 1, ref.get(start - 1)) != null
-                                            && isHasAndEquals(querySequence.charAt(n - 1), ref, start - 1)) {
+                            if (getVariationMaybe(hash, start - 1, ref.get(start - 1)) != null
+                                    && isHasAndEquals(querySequence.charAt(n - 1), ref, start - 1)) {
 
-                                        // subCnt(getVariation(hash, start - 1, ref.get(start - 1 ).toString()), dir, tp, tmpq,
-                                        // Qmean, nm, conf);
-                                        Variation tv = getVariation(hash, start - 1, String.valueOf(querySequence.charAt(n - 1)));
-                                        //Substract count.
-                                        subCnt(tv, dir, tp, queryQuality.charAt(n - 1) - 33, mappingQuality, nm, conf);
-                                    }
-                                    // Adjust count if the insertion is at the edge so that the AF won't > 1
+                                // subCnt(getVariation(hash, start - 1, ref.get(start - 1 ).toString()), dir, tp, tmpq,
+                                // Qmean, nm, conf);
+                                Variation tv = getVariation(hash, start - 1, String.valueOf(querySequence.charAt(n - 1)));
+                                //Substract count.
+                                subCnt(tv, dir, tp, queryQuality.charAt(n - 1) - 33, mappingQuality, nm, conf);
+                            }
+                            // Adjust count if the insertion is at the edge so that the AF won't > 1
                                     /*
                                     Condition:
                                     1). looking at second segment in CIGAR string
                                     2). first segment is a soft-clipping or a hard-clipping
                                     */
-                                    if (ci == 1 && (cigar.getCigarElement(0).getOperator() == CigarOperator.S || cigar.getCigarElement(0).getOperator() == CigarOperator.H)) {
-                                        //Add one more variant corresponding to base at start - 1 to hash
-                                        Variation ttref = getVariation(hash, start - 1, ref.get(start - 1).toString());
-                                        ttref.incDir(dir);
-                                        ttref.cnt++;
-                                        ttref.pstd = hv.pstd;
-                                        ttref.qstd = hv.qstd;
-                                        ttref.pmean += tp;
-                                        ttref.qmean += tmpq;
-                                        ttref.Qmean += mappingQuality;
-                                        ttref.pp = tp;
-                                        ttref.pq = tmpq;
-                                        ttref.nm += nm - nmoff;
-                                        incCnt(cov, start - 1, 1);
-                                    }
-                                }
-
-                                //adjust read position by m (CIGAR segment length) + offset + multoffp
-                                n += m + offset + multoffp;
-                                p += m + offset + multoffp;
-                                //adjust reference position by offset + multoffs
-                                start += offset + multoffs;
-                                continue;
+                            if (ci == 1 && (cigar.getCigarElement(0).getOperator() == CigarOperator.S || cigar.getCigarElement(0).getOperator() == CigarOperator.H)) {
+                                //Add one more variant corresponding to base at start - 1 to hash
+                                Variation ttref = getVariation(hash, start - 1, ref.get(start - 1).toString());
+                                ttref.incDir(dir);
+                                ttref.cnt++;
+                                ttref.pstd = hv.pstd;
+                                ttref.qstd = hv.qstd;
+                                ttref.pmean += tp;
+                                ttref.qmean += tmpq;
+                                ttref.Qmean += mappingQuality;
+                                ttref.pp = tp;
+                                ttref.pq = tmpq;
+                                ttref.nm += nm - nmoff;
+                                incCnt(cov, start - 1, 1);
                             }
-                            case D: { //deletion
-                                offset = 0;
-                                //description string of deleted segment
-                                StringBuilder s = new StringBuilder("-").append(m);
-                                //sequence to be appended if next segment is matched
-                                StringBuilder ss = new StringBuilder();
-                                //quality of last base before deletion
-                                char q1 = queryQuality.charAt(n - 1);
-                                //quality of this segment
-                                StringBuilder q = new StringBuilder();
+                        }
 
-                                // For multiple indels within $VEXT bp
-                                //offset for read position if next segment is matched
-                                int multoffs = 0;
-                                //offset for reference position if next segment is matched
-                                int multoffp = 0;
-                                int nmoff = 0;
+                        //adjust read position by m (CIGAR segment length) + offset + multoffp
+                        n += m + offset + multoffp;
+                        p += m + offset + multoffp;
+                        //adjust reference position by offset + multoffs
+                        start += offset + multoffs;
+                        continue;
+                    }
+                    case D: { //deletion
+                        offset = 0;
+                        //description string of deleted segment
+                        StringBuilder s = new StringBuilder("-").append(m);
+                        //sequence to be appended if next segment is matched
+                        StringBuilder ss = new StringBuilder();
+                        //quality of last base before deletion
+                        char q1 = queryQuality.charAt(n - 1);
+                        //quality of this segment
+                        StringBuilder q = new StringBuilder();
+
+                        // For multiple indels within $VEXT bp
+                        //offset for read position if next segment is matched
+                        int multoffs = 0;
+                        //offset for reference position if next segment is matched
+                        int multoffp = 0;
+                        int nmoff = 0;
 
                                 /*
                                 Condition:
@@ -1943,276 +1957,276 @@ public class VarDict {
                                 4). CIGAR string has one more entry after next one
                                 5). this entry is insertion or deletion
                                  */
-                                if (conf.performLocalRealignment && cigar.numCigarElements() > ci + 2
-                                        && cigar.getCigarElement(ci + 1).getLength() <= conf.vext
-                                        && cigar.getCigarElement(ci + 1).getOperator() == CigarOperator.M
-                                        && (cigar.getCigarElement(ci + 2).getOperator() == CigarOperator.I
-                                         || cigar.getCigarElement(ci + 2).getOperator() == CigarOperator.D)) {
+                        if (conf.performLocalRealignment && cigar.numCigarElements() > ci + 2
+                                && cigar.getCigarElement(ci + 1).getLength() <= conf.vext
+                                && cigar.getCigarElement(ci + 1).getOperator() == CigarOperator.M
+                                && (cigar.getCigarElement(ci + 2).getOperator() == CigarOperator.I
+                                || cigar.getCigarElement(ci + 2).getOperator() == CigarOperator.D)) {
 
-                                    int mLen = cigar.getCigarElement(ci + 1).getLength();
-                                    int indelLen = cigar.getCigarElement(ci + 2).getLength();
+                            int mLen = cigar.getCigarElement(ci + 1).getLength();
+                            int indelLen = cigar.getCigarElement(ci + 2).getLength();
 
-                                    //append '#' + next matched segment from read
-                                    s.append("#").append(substr(querySequence, n, mLen));
-                                    //append quality string of next matched segment from read
-                                    q.append(substr(queryQuality, n, mLen));
+                            //append '#' + next matched segment from read
+                            s.append("#").append(substr(querySequence, n, mLen));
+                            //append quality string of next matched segment from read
+                            q.append(substr(queryQuality, n, mLen));
 
-                                    //if an insertion is two segments ahead, append '^' + part of sequence corresponding to next-next segment
-                                    //otherwise (deletion) append '^' + length of a next-next segment
-                                    s.append('^').append(cigar.getCigarElement(ci + 2).getOperator() == CigarOperator.I ? substr(querySequence, n + mLen, indelLen) : indelLen);
-                                    //same for quality string
-                                    q.append(cigar.getCigarElement(ci + 2).getOperator() == CigarOperator.I ? substr(queryQuality, n + mLen, indelLen) : "");
+                            //if an insertion is two segments ahead, append '^' + part of sequence corresponding to next-next segment
+                            //otherwise (deletion) append '^' + length of a next-next segment
+                            s.append('^').append(cigar.getCigarElement(ci + 2).getOperator() == CigarOperator.I ? substr(querySequence, n + mLen, indelLen) : indelLen);
+                            //same for quality string
+                            q.append(cigar.getCigarElement(ci + 2).getOperator() == CigarOperator.I ? substr(queryQuality, n + mLen, indelLen) : "");
 
-                                    //add length of next segment to both read and reference offsets
-                                    //add length of next-next segment to reference position (for insertion) or to read position(for deletion)
-                                    multoffs += mLen + (cigar.getCigarElement(ci + 2).getOperator() == CigarOperator.D ? indelLen : 0);
-                                    multoffp += mLen + (cigar.getCigarElement(ci + 2).getOperator() == CigarOperator.I ? indelLen : 0);
-                                    if (cigar.numCigarElements() > ci + 3
-                                            && cigar.getCigarElement(ci + 3).getOperator() == CigarOperator.M) {
-                                        int vsn = 0;
-                                        int tn = n + multoffp;
-                                        int ts = start + multoffs + m;
-                                        for (int vi = 0; vsn <= conf.vext && vi < cigar.getCigarElement(ci + 3).getLength(); vi++) {
-                                            if (querySequence.charAt(tn + vi) == 'N') {
-                                                break;
-                                            }
-                                            if (queryQuality.charAt(tn + vi) - 33 < conf.goodq) {
-                                                break;
-                                            }
-                                            if (isHasAndEquals('N', ref, ts + vi)) {
-                                                break;
-                                            }
-                                            Character refCh = ref.get(ts + vi);
-                                            if (refCh != null) {
-                                                if (isNotEquals(querySequence.charAt(tn + vi), refCh)) {
-                                                    offset = vi + 1;
-                                                    nmoff++;
-                                                    vsn = 0;
-                                                } else {
-                                                    vsn++;
-                                                }
-                                            }
-                                        }
-                                        if (offset != 0) {
-                                            ss.append(substr(querySequence, tn, offset));
-                                            q.append(substr(queryQuality, tn, offset));
+                            //add length of next segment to both read and reference offsets
+                            //add length of next-next segment to reference position (for insertion) or to read position(for deletion)
+                            multoffs += mLen + (cigar.getCigarElement(ci + 2).getOperator() == CigarOperator.D ? indelLen : 0);
+                            multoffp += mLen + (cigar.getCigarElement(ci + 2).getOperator() == CigarOperator.I ? indelLen : 0);
+                            if (cigar.numCigarElements() > ci + 3
+                                    && cigar.getCigarElement(ci + 3).getOperator() == CigarOperator.M) {
+                                int vsn = 0;
+                                int tn = n + multoffp;
+                                int ts = start + multoffs + m;
+                                for (int vi = 0; vsn <= conf.vext && vi < cigar.getCigarElement(ci + 3).getLength(); vi++) {
+                                    if (querySequence.charAt(tn + vi) == 'N') {
+                                        break;
+                                    }
+                                    if (queryQuality.charAt(tn + vi) - 33 < conf.goodq) {
+                                        break;
+                                    }
+                                    if (isHasAndEquals('N', ref, ts + vi)) {
+                                        break;
+                                    }
+                                    Character refCh = ref.get(ts + vi);
+                                    if (refCh != null) {
+                                        if (isNotEquals(querySequence.charAt(tn + vi), refCh)) {
+                                            offset = vi + 1;
+                                            nmoff++;
+                                            vsn = 0;
+                                        } else {
+                                            vsn++;
                                         }
                                     }
-                                    // skip next 2 CIGAR segments
-                                    ci += 2;
-                                } else if (conf.performLocalRealignment && cigar.numCigarElements() > ci + 1 && cigar.getCigarElement(ci + 1).getOperator() == CigarOperator.I) {
+                                }
+                                if (offset != 0) {
+                                    ss.append(substr(querySequence, tn, offset));
+                                    q.append(substr(queryQuality, tn, offset));
+                                }
+                            }
+                            // skip next 2 CIGAR segments
+                            ci += 2;
+                        } else if (conf.performLocalRealignment && cigar.numCigarElements() > ci + 1 && cigar.getCigarElement(ci + 1).getOperator() == CigarOperator.I) {
                                     /*
                                     Condition:
                                     1). CIGAR string has next entry
                                     2). next CIGAR segment is an insertion
                                      */
 
-                                    int insLen = cigar.getCigarElement(ci + 1).getLength();
-                                    //Append '^' + next segment (inserted)
-                                    s.append("^").append(substr(querySequence, n, insLen));
-                                    //Append next segement to quality string
-                                    q.append(substr(queryQuality, n, insLen));
+                            int insLen = cigar.getCigarElement(ci + 1).getLength();
+                            //Append '^' + next segment (inserted)
+                            s.append("^").append(substr(querySequence, n, insLen));
+                            //Append next segement to quality string
+                            q.append(substr(queryQuality, n, insLen));
 
-                                    //Shift reference position by length of next segment
-                                    //skip next CIGAR segment
-                                    multoffp += insLen;
-                                    if (cigar.numCigarElements() > ci + 2
-                                            && cigar.getCigarElement(ci + 2).getOperator() == CigarOperator.M) {
-                                        int mLen = cigar.getCigarElement(ci + 2).getLength();
-                                        int vsn = 0;
-                                        int tn = n + multoffp;
-                                        int ts = start + m;
-                                        for (int vi = 0; vsn <= conf.vext && vi < mLen; vi++) {
-                                            char seqCh = querySequence.charAt(tn + vi);
-                                            if (seqCh == 'N') {
-                                                break;
-                                            }
-                                            if (queryQuality.charAt(tn + vi) - 33 < conf.goodq) {
-                                                break;
-                                            }
-                                            Character refCh = ref.get(ts + vi);
-                                            if (refCh != null) {
-                                                if (isEquals('N', refCh)) {
-                                                    break;
-                                                }
-                                                if (isNotEquals(seqCh, refCh)) {
-                                                    offset = vi + 1;
-                                                    nmoff++;
-                                                    vsn = 0;
-                                                } else {
-                                                    vsn++;
-                                                }
-                                            }
+                            //Shift reference position by length of next segment
+                            //skip next CIGAR segment
+                            multoffp += insLen;
+                            if (cigar.numCigarElements() > ci + 2
+                                    && cigar.getCigarElement(ci + 2).getOperator() == CigarOperator.M) {
+                                int mLen = cigar.getCigarElement(ci + 2).getLength();
+                                int vsn = 0;
+                                int tn = n + multoffp;
+                                int ts = start + m;
+                                for (int vi = 0; vsn <= conf.vext && vi < mLen; vi++) {
+                                    char seqCh = querySequence.charAt(tn + vi);
+                                    if (seqCh == 'N') {
+                                        break;
+                                    }
+                                    if (queryQuality.charAt(tn + vi) - 33 < conf.goodq) {
+                                        break;
+                                    }
+                                    Character refCh = ref.get(ts + vi);
+                                    if (refCh != null) {
+                                        if (isEquals('N', refCh)) {
+                                            break;
                                         }
-                                        if (offset != 0) {
-                                            ss.append(substr(querySequence, tn, offset));
-                                            q.append(substr(queryQuality, tn, offset));
+                                        if (isNotEquals(seqCh, refCh)) {
+                                            offset = vi + 1;
+                                            nmoff++;
+                                            vsn = 0;
+                                        } else {
+                                            vsn++;
                                         }
                                     }
-                                    ci += 1;
-                                } else {
+                                }
+                                if (offset != 0) {
+                                    ss.append(substr(querySequence, tn, offset));
+                                    q.append(substr(queryQuality, tn, offset));
+                                }
+                            }
+                            ci += 1;
+                        } else {
                                     /*
                                     Condition:
                                     1). CIGAR string has next entry
                                     2). next CIGAR segment is matched
                                      */
-                                    if (conf.performLocalRealignment && cigar.numCigarElements() > ci + 1 && cigar.getCigarElement(ci + 1).getOperator() == CigarOperator.M) {
-                                        int mLen = cigar.getCigarElement(ci + 1).getLength();
-                                        int vsn = 0;
-                                        //Loop over next CIGAR segment (no more than conf.vext bases ahead)
-                                        for (int vi = 0; vsn <= conf.vext && vi < mLen; vi++) {
-                                            char seqCh = querySequence.charAt(n + vi);
-                                            //If base is unknown, exit loop
-                                            if (seqCh == 'N') {
-                                                break;
-                                            }
-                                            //If base quality is less than $GOODQ, exit loop
-                                            if (queryQuality.charAt(n + vi) - 33 < conf.goodq) {
-                                                break;
-                                            }
-                                            //If reference sequence has base at this position and it matches read base, update offset
-                                            Character refCh = ref.get(start + m + vi);
-                                            if (refCh != null) {
-                                                if (isEquals('N', refCh)) {
-                                                    break;
-                                                }
-                                                if (isNotEquals(seqCh, refCh)) {
-                                                    offset = vi + 1;
-                                                    nmoff++;
-                                                    vsn = 0;
-                                                } else {
-                                                    vsn++;
-                                                }
-                                            }
-
+                            if (conf.performLocalRealignment && cigar.numCigarElements() > ci + 1 && cigar.getCigarElement(ci + 1).getOperator() == CigarOperator.M) {
+                                int mLen = cigar.getCigarElement(ci + 1).getLength();
+                                int vsn = 0;
+                                //Loop over next CIGAR segment (no more than conf.vext bases ahead)
+                                for (int vi = 0; vsn <= conf.vext && vi < mLen; vi++) {
+                                    char seqCh = querySequence.charAt(n + vi);
+                                    //If base is unknown, exit loop
+                                    if (seqCh == 'N') {
+                                        break;
+                                    }
+                                    //If base quality is less than $GOODQ, exit loop
+                                    if (queryQuality.charAt(n + vi) - 33 < conf.goodq) {
+                                        break;
+                                    }
+                                    //If reference sequence has base at this position and it matches read base, update offset
+                                    Character refCh = ref.get(start + m + vi);
+                                    if (refCh != null) {
+                                        if (isEquals('N', refCh)) {
+                                            break;
                                         }
-
-                                        //If next CIGAR segment has good matching base
-                                        if (offset != 0) {
-                                            //Append first offset bases of next segment to ss and q
-                                            ss.append(substr(querySequence, n, offset));
-                                            q.append(substr(queryQuality, n, offset));
+                                        if (isNotEquals(seqCh, refCh)) {
+                                            offset = vi + 1;
+                                            nmoff++;
+                                            vsn = 0;
+                                        } else {
+                                            vsn++;
                                         }
                                     }
-                                }
-                                //offset should be reset to 0 on every loop, so it is non-zero only if previous next CIGAR segment is matched
-                                // Append '&' and ss to s if next segment has good matching base
-                                if (offset > 0) {
-                                    s.append("&").append(ss);
+
                                 }
 
-                                //quality of first matched base after deletion
-                                //append best of $q1 and $q2
-                                if (n + offset >= queryQuality.length()) {
-                                    q.append(q1);
-                                } else {
-                                    char q2 = queryQuality.charAt(n + offset);
-                                    q.append(q1 > q2 ? q1 : q2);
+                                //If next CIGAR segment has good matching base
+                                if (offset != 0) {
+                                    //Append first offset bases of next segment to ss and q
+                                    ss.append(substr(querySequence, n, offset));
+                                    q.append(substr(queryQuality, n, offset));
                                 }
-
-                                //If reference position is inside region of interest
-                                if (start >= region.start && start <= region.end) {
-                                    //add variant structure for deletion at this position
-                                    Variation hv = getVariation(hash, start, s.toString()); //variation structure
-                                    //add record for deletion in deletions map
-                                    increment(dels5, start, s.toString());
-                                    hv.incDir(dir);
-                                    //increase count
-                                    hv.cnt++;
-
-                                    //minimum of positions from start of read and end of read
-                                    int tp = p < rlen1 - p ? p + 1 : rlen1 - p;
-
-                                    //average quality of bases
-                                    double tmpq = 0;
-
-                                    for (int i = 0; i < q.length(); i++) {
-                                        tmpq += q.charAt(i) - 33;
-                                    }
-
-                                    tmpq = tmpq / q.length();
-
-                                    //pstd is a flag that is 1 if the variant is covered by at least 2 read segments with different positions
-                                    if (hv.pstd == false && hv.pp != 0 && tp != hv.pp) {
-                                        hv.pstd = true;
-                                    }
-
-                                    //qstd is a flag that is 1 if the variant is covered by at least 2 segment reads with different qualities
-                                    if (hv.qstd == false && hv.pq != 0 && tmpq != hv.pq) {
-                                        hv.qstd = true;
-                                    }
-                                    hv.pmean += tp;
-                                    hv.qmean += tmpq;
-                                    hv.Qmean += mappingQuality;
-                                    hv.pp = tp;
-                                    hv.pq = tmpq;
-                                    hv.nm += nm - nmoff;
-                                    if (tmpq >= conf.goodq) {
-                                        hv.hicnt++;
-                                    } else {
-                                        hv.locnt++;
-                                    }
-
-                                    //increase coverage count for reference bases missing from the read
-                                    for (int i = 0; i < m; i++) {
-                                        incCnt(cov, start + i, 1);
-                                    }
-                                }
-
-                                //adjust reference position by offset + multoffs
-                                start += m + offset + multoffs;
-
-                                //adjust read position by m (CIGAR segment length) + offset + multoffp
-                                n += offset + multoffp;
-                                p += offset + multoffp;
-                                continue;
                             }
-                            default:
-                                break;
                         }
-                        //End branch on CIGAR segment type
+                        //offset should be reset to 0 on every loop, so it is non-zero only if previous next CIGAR segment is matched
+                        // Append '&' and ss to s if next segment has good matching base
+                        if (offset > 0) {
+                            s.append("&").append(ss);
+                        }
 
-                        // Now dealing with matching part
-                        int nmoff = 0;
-                        int moffset = 0;
-                        //Loop over bases of CIGAR segment
-                        for (int i = offset; i < m; i++) {
-                            //flag to trim reads at opt_T bases from start or end (depending on direction)
-                            boolean trim = false;
-                            if (conf.trimBasesAfter != 0) {
-                                if (dir == false) {
-                                    if (n > conf.trimBasesAfter) {
-                                        trim = true;
-                                    }
-                                } else {
-                                    if (rlen2 - n > conf.trimBasesAfter) {
-                                        trim = true;
-                                    }
-                                }
+                        //quality of first matched base after deletion
+                        //append best of $q1 and $q2
+                        if (n + offset >= queryQuality.length()) {
+                            q.append(q1);
+                        } else {
+                            char q2 = queryQuality.charAt(n + offset);
+                            q.append(q1 > q2 ? q1 : q2);
+                        }
+
+                        //If reference position is inside region of interest
+                        if (start >= region.start && start <= region.end) {
+                            //add variant structure for deletion at this position
+                            Variation hv = getVariation(hash, start, s.toString()); //variation structure
+                            //add record for deletion in deletions map
+                            increment(dels5, start, s.toString());
+                            hv.incDir(dir);
+                            //increase count
+                            hv.cnt++;
+
+                            //minimum of positions from start of read and end of read
+                            int tp = p < rlen1 - p ? p + 1 : rlen1 - p;
+
+                            //average quality of bases
+                            double tmpq = 0;
+
+                            for (int i = 0; i < q.length(); i++) {
+                                tmpq += q.charAt(i) - 33;
                             }
 
-                            //variation string. Initialize to first base of the read sequence
-                            final char ch1 = querySequence.charAt(n);
-                            String s = String.valueOf(ch1);
-                            boolean startWithDelition = false;
-                            //skip if base is unknown
-                            if (ch1 == 'N') {
-                                start++;
-                                n++;
-                                p++;
-                                continue;
+                            tmpq = tmpq / q.length();
+
+                            //pstd is a flag that is 1 if the variant is covered by at least 2 read segments with different positions
+                            if (hv.pstd == false && hv.pp != 0 && tp != hv.pp) {
+                                hv.pstd = true;
                             }
 
-                            //sum of qualities for bases
-                            double q = queryQuality.charAt(n) - 33;
-                            //number of bases for quality calculation
-                            int qbases = 1;
-                            //number of bases in insertion for quality calculation
-                            int qibases = 0;
-                            // for more than one nucleotide mismatch
-                            StringBuilder ss = new StringBuilder();
-                            // More than one mismatches will only perform when all nucleotides have queryQuality > $GOODQ
-                            // Update: Forgo the queryQuality check. Will recover later
+                            //qstd is a flag that is 1 if the variant is covered by at least 2 segment reads with different qualities
+                            if (hv.qstd == false && hv.pq != 0 && tmpq != hv.pq) {
+                                hv.qstd = true;
+                            }
+                            hv.pmean += tp;
+                            hv.qmean += tmpq;
+                            hv.Qmean += mappingQuality;
+                            hv.pp = tp;
+                            hv.pq = tmpq;
+                            hv.nm += nm - nmoff;
+                            if (tmpq >= conf.goodq) {
+                                hv.hicnt++;
+                            } else {
+                                hv.locnt++;
+                            }
+
+                            //increase coverage count for reference bases missing from the read
+                            for (int i = 0; i < m; i++) {
+                                incCnt(cov, start + i, 1);
+                            }
+                        }
+
+                        //adjust reference position by offset + multoffs
+                        start += m + offset + multoffs;
+
+                        //adjust read position by m (CIGAR segment length) + offset + multoffp
+                        n += offset + multoffp;
+                        p += offset + multoffp;
+                        continue;
+                    }
+                    default:
+                        break;
+                }
+                //End branch on CIGAR segment type
+
+                // Now dealing with matching part
+                int nmoff = 0;
+                int moffset = 0;
+                //Loop over bases of CIGAR segment
+                for (int i = offset; i < m; i++) {
+                    //flag to trim reads at opt_T bases from start or end (depending on direction)
+                    boolean trim = false;
+                    if (conf.trimBasesAfter != 0) {
+                        if (dir == false) {
+                            if (n > conf.trimBasesAfter) {
+                                trim = true;
+                            }
+                        } else {
+                            if (rlen2 - n > conf.trimBasesAfter) {
+                                trim = true;
+                            }
+                        }
+                    }
+
+                    //variation string. Initialize to first base of the read sequence
+                    final char ch1 = querySequence.charAt(n);
+                    String s = String.valueOf(ch1);
+                    boolean startWithDelition = false;
+                    //skip if base is unknown
+                    if (ch1 == 'N') {
+                        start++;
+                        n++;
+                        p++;
+                        continue;
+                    }
+
+                    //sum of qualities for bases
+                    double q = queryQuality.charAt(n) - 33;
+                    //number of bases for quality calculation
+                    int qbases = 1;
+                    //number of bases in insertion for quality calculation
+                    int qibases = 0;
+                    // for more than one nucleotide mismatch
+                    StringBuilder ss = new StringBuilder();
+                    // More than one mismatches will only perform when all nucleotides have queryQuality > $GOODQ
+                    // Update: Forgo the queryQuality check. Will recover later
 
                             /*
                             Condition:
@@ -2221,47 +2235,47 @@ public class VarDict {
                             3). reference sequence has base at start
                             4). base at n in read is not equal to base in reference sequence
                              */
-                            while ((start + 1) >= region.start
-                                    && (start + 1) <= region.end && (i + 1) < m
-                                    && q >= conf.goodq
-                                    && isHasAndNotEquals(ref, start, querySequence, n)
-                                    && isNotEquals('N', ref.get(start))) {
+                    while ((start + 1) >= region.start
+                            && (start + 1) <= region.end && (i + 1) < m
+                            && q >= conf.goodq
+                            && isHasAndNotEquals(ref, start, querySequence, n)
+                            && isNotEquals('N', ref.get(start))) {
 
-                                //Break if base is unknown in the read
-                                char nuc = querySequence.charAt(n + 1);
-                                if (nuc == 'N') {
-                                    break;
-                                }
-                                if (isHasAndEquals('N', ref, start + 1)) {
-                                    break;
-                                }
+                        //Break if base is unknown in the read
+                        char nuc = querySequence.charAt(n + 1);
+                        if (nuc == 'N') {
+                            break;
+                        }
+                        if (isHasAndEquals('N', ref, start + 1)) {
+                            break;
+                        }
 
-                                //Condition: base at n + 1 does not match reference base at start + 1
-                                if (isNotEquals(ref.get(start + 1), nuc)) {
+                        //Condition: base at n + 1 does not match reference base at start + 1
+                        if (isNotEquals(ref.get(start + 1), nuc)) {
 
-                                    //append the base from read
-                                    ss.append(nuc);
-                                    //add quality to total sum
-                                    q += queryQuality.charAt(n + 1) - 33;
-                                    //increase number of bases
-                                    qbases++;
-                                    //shift read position by 1
-                                    n++;
-                                    p++;
-                                    i++;
-                                    //shift reference position by 1
-                                    start++;
-                                    nmoff++;
-                                } else { //if bases match, exit loop
-                                    break;
-                                }
-                            }
+                            //append the base from read
+                            ss.append(nuc);
+                            //add quality to total sum
+                            q += queryQuality.charAt(n + 1) - 33;
+                            //increase number of bases
+                            qbases++;
+                            //shift read position by 1
+                            n++;
+                            p++;
+                            i++;
+                            //shift reference position by 1
+                            start++;
+                            nmoff++;
+                        } else { //if bases match, exit loop
+                            break;
+                        }
+                    }
 
-                            //If multi-base mismatch is found, append it to s after '&'
-                            if (ss.length() > 0) {
-                                s += "&" + ss;
-                            }
-                            int ddlen = 0;
+                    //If multi-base mismatch is found, append it to s after '&'
+                    if (ss.length() > 0) {
+                        s += "&" + ss;
+                    }
+                    int ddlen = 0;
 
                             /*
                             Condition:
@@ -2272,160 +2286,160 @@ public class VarDict {
                             5). either multi-nucleotide mismatch is found or read base at $n does not match reference base
                             6). read base at $n has good quality
                              */
-                            if (conf.performLocalRealignment && m - i <= conf.vext
-                                    && cigar.numCigarElements() > ci + 1 && cigar.getCigarElement(ci + 1).getOperator() == CigarOperator.D
-                                    && ref.containsKey(start)
-                                    && (ss.length() > 0 || isNotEquals(querySequence.charAt(n), ref.get(start)))
-                                    && queryQuality.charAt(n) - 33 > conf.goodq) {
+                    if (conf.performLocalRealignment && m - i <= conf.vext
+                            && cigar.numCigarElements() > ci + 1 && cigar.getCigarElement(ci + 1).getOperator() == CigarOperator.D
+                            && ref.containsKey(start)
+                            && (ss.length() > 0 || isNotEquals(querySequence.charAt(n), ref.get(start)))
+                            && queryQuality.charAt(n) - 33 > conf.goodq) {
 
-                                //loop until end of CIGAR segments
-                                while (i + 1 < m) {
-                                    //append next base to s and add its quality to q
-                                    s += querySequence.charAt(n + 1);
-                                    q += queryQuality.charAt(n + 1) - 33;
-                                    //increase number of bases
-                                    qbases++;
+                        //loop until end of CIGAR segments
+                        while (i + 1 < m) {
+                            //append next base to s and add its quality to q
+                            s += querySequence.charAt(n + 1);
+                            q += queryQuality.charAt(n + 1) - 33;
+                            //increase number of bases
+                            qbases++;
 
-                                    //shift read and reference indices by 1
-                                    i++;
-                                    n++;
-                                    p++;
-                                    start++;
-                                }
+                            //shift read and reference indices by 1
+                            i++;
+                            n++;
+                            p++;
+                            start++;
+                        }
 
-                                //remove '&' delimiter from s
-                                s = s.replaceFirst("&", "");
-                                //prepend s with deletion of length of next CIGAR segment + '&' delimiter
-                                s = "-" + cigar.getCigarElement(ci + 1).getLength() + "&" + s;
-                                startWithDelition = true;
-                                ddlen = cigar.getCigarElement(ci + 1).getLength();
-                                ci += 1;
+                        //remove '&' delimiter from s
+                        s = s.replaceFirst("&", "");
+                        //prepend s with deletion of length of next CIGAR segment + '&' delimiter
+                        s = "-" + cigar.getCigarElement(ci + 1).getLength() + "&" + s;
+                        startWithDelition = true;
+                        ddlen = cigar.getCigarElement(ci + 1).getLength();
+                        ci += 1;
 
-                                //If CIGAR has insertion two segments ahead
-                                if (cigar.numCigarElements() > ci + 1 && cigar.getCigarElement(ci + 1).getOperator() == CigarOperator.I) {
-                                    //append '^' + next-next segment sequence
-                                    s += "^" + substr(querySequence, n + 1, cigar.getCigarElement(ci + 1).getLength());
+                        //If CIGAR has insertion two segments ahead
+                        if (cigar.numCigarElements() > ci + 1 && cigar.getCigarElement(ci + 1).getOperator() == CigarOperator.I) {
+                            //append '^' + next-next segment sequence
+                            s += "^" + substr(querySequence, n + 1, cigar.getCigarElement(ci + 1).getLength());
 
-                                    //Loop over next-next segment
-                                    int nextLen = cigar.getCigarElement(ci + 1).getLength();
-                                    for (int qi = 1; qi <= nextLen; qi++) {
-                                        //add base quality to total quality
-                                        q += queryQuality.charAt(n + 1 + qi) - 33;
-                                        //increase number of insertion bases
-                                        qibases++;
-                                    }
+                            //Loop over next-next segment
+                            int nextLen = cigar.getCigarElement(ci + 1).getLength();
+                            for (int qi = 1; qi <= nextLen; qi++) {
+                                //add base quality to total quality
+                                q += queryQuality.charAt(n + 1 + qi) - 33;
+                                //increase number of insertion bases
+                                qibases++;
+                            }
 
-                                    //adjust read position by length of next-next segment
-                                    n += nextLen;
-                                    p += nextLen;
-                                    ci += 1;
-                                }
-                                if (cigar.numCigarElements() > ci + 1 && cigar.getCigarElement(ci + 1).getOperator() == CigarOperator.M) {
-                                    Tuple4<Integer, String, String, Integer> tpl =
-                                            finndOffset(start + ddlen + 1, n + 1, cigar.getCigarElement(ci + 1).getLength(), querySequence, queryQuality, ref, cov, conf.vext, conf.goodq);
-                                    int toffset = tpl._1;
-                                    if (toffset != 0) {
-                                        moffset = toffset;
-                                        nmoff += tpl._4;
-                                        s += "&" + tpl._2;
-                                        String tq = tpl._3;
-                                        for (int qi = 0; qi < tq.length(); qi++) {
-                                            q += tq.charAt(qi) - 33;
-                                            qibases++;
-                                        }
-                                    }
+                            //adjust read position by length of next-next segment
+                            n += nextLen;
+                            p += nextLen;
+                            ci += 1;
+                        }
+                        if (cigar.numCigarElements() > ci + 1 && cigar.getCigarElement(ci + 1).getOperator() == CigarOperator.M) {
+                            Tuple4<Integer, String, String, Integer> tpl =
+                                    finndOffset(start + ddlen + 1, n + 1, cigar.getCigarElement(ci + 1).getLength(), querySequence, queryQuality, ref, cov, conf.vext, conf.goodq);
+                            int toffset = tpl._1;
+                            if (toffset != 0) {
+                                moffset = toffset;
+                                nmoff += tpl._4;
+                                s += "&" + tpl._2;
+                                String tq = tpl._3;
+                                for (int qi = 0; qi < tq.length(); qi++) {
+                                    q += tq.charAt(qi) - 33;
+                                    qibases++;
                                 }
                             }
-                            if (trim == false) {
-                                //If start - qbases + 1 is in region of interest
-                                final int pos = start - qbases + 1;
-                                if (pos >= region.start && pos <= region.end) {
-                                    //add variation record for $s
-                                    Variation hv = getVariation(hash, pos, s); //reference to variant structure
-                                    hv.incDir(dir);
+                        }
+                    }
+                    if (trim == false) {
+                        //If start - qbases + 1 is in region of interest
+                        final int pos = start - qbases + 1;
+                        if (pos >= region.start && pos <= region.end) {
+                            //add variation record for $s
+                            Variation hv = getVariation(hash, pos, s); //reference to variant structure
+                            hv.incDir(dir);
 
-                                    if(isBEGIN_ATGC_AMP_ATGCs_END(s)) {
-                                        //if s is one base followed by '&' and one or more bases
-                                        //add variant record for s to mnp
-                                        increment(mnp, pos, s);
-                                    }
+                            if (isBEGIN_ATGC_AMP_ATGCs_END(s)) {
+                                //if s is one base followed by '&' and one or more bases
+                                //add variant record for s to mnp
+                                increment(mnp, pos, s);
+                            }
 
-                                    //increment count
-                                    ++hv.cnt;
+                            //increment count
+                            ++hv.cnt;
 
-                                    //minimum of positions from start of read and end of read
-                                    int tp = p < rlen1 - p ? p + 1 : rlen1 - p;
+                            //minimum of positions from start of read and end of read
+                            int tp = p < rlen1 - p ? p + 1 : rlen1 - p;
 
-                                    //average quality of bases in the variation
-                                    q = q / (qbases + qibases);
+                            //average quality of bases in the variation
+                            q = q / (qbases + qibases);
 
-                                    //pstd is a flag that is 1 if the variant is covered by at least 2 read segments with different positions
-                                    if (hv.pstd == false && hv.pp != 0 && tp != hv.pp) {
-                                        hv.pstd = true;
-                                    }
+                            //pstd is a flag that is 1 if the variant is covered by at least 2 read segments with different positions
+                            if (hv.pstd == false && hv.pp != 0 && tp != hv.pp) {
+                                hv.pstd = true;
+                            }
 
-                                    //qstd is a flag that is 1 if the variant is covered by at least 2 segment reads with different qualities
-                                    if (hv.qstd == false && hv.pq != 0 && q != hv.pq) {
-                                        hv.qstd = true;
-                                    }
-                                    hv.pmean += tp;
-                                    hv.qmean += q;
-                                    hv.Qmean += mappingQuality;
-                                    hv.pp = tp;
-                                    hv.pq = q;
-                                    hv.nm += nm - nmoff;
-                                    if (q >= conf.goodq) {
-                                        hv.hicnt++;
-                                    } else {
-                                        hv.locnt++;
-                                    }
+                            //qstd is a flag that is 1 if the variant is covered by at least 2 segment reads with different qualities
+                            if (hv.qstd == false && hv.pq != 0 && q != hv.pq) {
+                                hv.qstd = true;
+                            }
+                            hv.pmean += tp;
+                            hv.qmean += q;
+                            hv.Qmean += mappingQuality;
+                            hv.pp = tp;
+                            hv.pq = q;
+                            hv.nm += nm - nmoff;
+                            if (q >= conf.goodq) {
+                                hv.hicnt++;
+                            } else {
+                                hv.locnt++;
+                            }
 
-                                    //increase coverage for bases covered by the variation
-                                    for (int qi = 1; qi <= qbases; qi++) {
-                                        incCnt(cov, start - qi + 1, 1);
-                                    }
-
-                                    //If variation starts with a deletion ('-' character)
-                                    if (startWithDelition) {
-                                        //add variation to deletions map
-                                        increment(dels5, pos, s);
-
-                                       //increase coverage for next CIGAR segment
-                                        for (int qi = 1; qi < ddlen; qi++) {
-                                            incCnt(cov, start + qi, 1);
-                                        }
-                                    }
-                                }
+                            //increase coverage for bases covered by the variation
+                            for (int qi = 1; qi <= qbases; qi++) {
+                                incCnt(cov, start - qi + 1, 1);
                             }
 
                             //If variation starts with a deletion ('-' character)
                             if (startWithDelition) {
-                                start += ddlen;
-                            }
+                                //add variation to deletions map
+                                increment(dels5, pos, s);
 
-                            //Shift reference position by 1 if CIGAR segment is not insertion
-                            if (operator != CigarOperator.I) {
-                                start++;
+                                //increase coverage for next CIGAR segment
+                                for (int qi = 1; qi < ddlen; qi++) {
+                                    incCnt(cov, start + qi, 1);
+                                }
                             }
-                            //Shift read position by 1 if CIGAR segment is not deletion
-                            if (operator != CigarOperator.D) {
-                                n++;
-                                p++;
-                            }
-                        }
-                        if (moffset != 0) {
-                            offset = moffset;
-                            n += moffset;
-                            start += moffset;
-                            p += moffset;
-                        }
-                        if (start > region.end) { //end if reference position is outside region of interest
-                            break;
                         }
                     }
+
+                    //If variation starts with a deletion ('-' character)
+                    if (startWithDelition) {
+                        start += ddlen;
+                    }
+
+                    //Shift reference position by 1 if CIGAR segment is not insertion
+                    if (operator != CigarOperator.I) {
+                        start++;
+                    }
+                    //Shift read position by 1 if CIGAR segment is not deletion
+                    if (operator != CigarOperator.D) {
+                        n++;
+                        p++;
+                    }
+                }
+                if (moffset != 0) {
+                    offset = moffset;
+                    n += moffset;
+                    start += moffset;
+                    p += moffset;
+                }
+                if (start > region.end) { //end if reference position is outside region of interest
+                    break;
                 }
             }
+//                }
         }
+//        }
 
         if (conf.outputSplicing) {
             for (Entry<String, int[]> entry : spliceCnt.entrySet()) {
@@ -2434,23 +2448,23 @@ public class VarDict {
             System.exit(0);
         }
 
-        if (conf.performLocalRealignment) {
-            if (conf.y)
-                System.err.println("Start Realigndel");
-            realigndel(hash, dels5, cov, sclip5, sclip3, ref, region.chr, chrs, rlen, bams, conf);
-            if (conf.y)
-                System.err.println("Start Realignins");
-            realignins(hash, iHash, ins, cov, sclip5, sclip3, ref, region.chr, chrs, conf);
-            if (conf.y)
-                System.err.println("Start Realignlgdel");
-            realignlgdel(hash, cov, sclip5, sclip3, ref, region.chr, chrs, rlen, bams, conf);
-            if (conf.y)
-                System.err.println("Start Realignlgins");
-            realignlgins(hash, iHash, cov, sclip5, sclip3, ref, region.chr, chrs, rlen, bams, conf);
-            if (conf.y)
-                System.err.println("Start Realignlgins30");
-            realignlgins30(hash, iHash, cov, sclip5, sclip3, ref, region.chr, chrs, rlen, bams, conf);
-        }
+//        if (conf.performLocalRealignment) {
+//            if (conf.y)
+//                System.err.println("Start Realigndel");
+//            realigndel(hash, dels5, cov, sclip5, sclip3, ref, region.chr, chrs, rlen, bams, conf);
+//            if (conf.y)
+//                System.err.println("Start Realignins");
+//            realignins(hash, iHash, ins, cov, sclip5, sclip3, ref, region.chr, chrs, conf);
+//            if (conf.y)
+//                System.err.println("Start Realignlgdel");
+//            realignlgdel(hash, cov, sclip5, sclip3, ref, region.chr, chrs, rlen, bams, conf);
+//            if (conf.y)
+//                System.err.println("Start Realignlgins");
+//            realignlgins(hash, iHash, cov, sclip5, sclip3, ref, region.chr, chrs, rlen, bams, conf);
+//            if (conf.y)
+//                System.err.println("Start Realignlgins30");
+//            realignlgins30(hash, iHash, cov, sclip5, sclip3, ref, region.chr, chrs, rlen, bams, conf);
+//        }
 
         adjMNP(hash, mnp, cov, ref, sclip3, sclip5, conf);
 
@@ -2458,7 +2472,7 @@ public class VarDict {
     }
 
     private static CigarOperator getCigarOperator(Cigar cigar, int ci) {
-        CigarOperator operator =  cigar.getCigarElement(ci).getOperator();
+        CigarOperator operator = cigar.getCigarElement(ci).getOperator();
         // Treat insertions at the edge as soft-clipping
         if ((ci == 0 || ci == cigar.numCigarElements() - 1) && operator == CigarOperator.I) {
             operator = CigarOperator.S;
@@ -2520,19 +2534,21 @@ public class VarDict {
 
     /**
      * Read BAM files and create variant structure
+     *
      * @param region region of interest
-     * @param bam BAM file names (':' delimiter)
-     * @param ref part of reference sequence (key - position, value - base)
-     * @param chrs map of chromosome lengths
+     * @param bam    BAM file names (':' delimiter)
+     * @param ref    part of reference sequence (key - position, value - base)
+     * @param chrs   map of chromosome lengths
      * @param SPLICE set of strings representing spliced regions
-     * @param ampliconBasedCalling string of maximum_distance:minimum_overlap for amplicon based calling
-     * @param Rlen maximum read length
-     * @param conf VarDict configuration
+     * @param Rlen   maximum read length
+     * @param conf   VarDict configuration
      * @return Tuple of (maxmimum read length, variant structure)
      * @throws IOException
      */
-    static Tuple2<Integer, Map<Integer, Vars>> toVars(Region region, String bam, Map<Integer, Character> ref,
-            Map<String, Integer> chrs, String sample, Set<String> SPLICE, String ampliconBasedCalling, int Rlen, Configuration conf) throws IOException {
+    public static Tuple2<Integer, Map<Integer, Vars>> toVars(Region region, List<SAMRecord> bam, HashMap<Integer, Character> ref,
+                                                             HashMap<String, Integer> chrs, String sample, Set<String> SPLICE, int Rlen, Configuration conf) throws IOException {
+
+        String ampliconBasedCalling = conf.ampliconBasedCalling;
 
         Tuple4<Map<Integer, Map<String, Variation>>, Map<Integer, Map<String, Variation>>, Map<Integer, Integer>, Integer> parseTpl =
                 parseSAM(region, bam, chrs, sample, SPLICE, ampliconBasedCalling, Rlen, ref, conf);
@@ -2549,7 +2565,7 @@ public class VarDict {
             final int p = entH.getKey();
             Map<String, Variation> v = entH.getValue();
 
-            if(v.isEmpty()) {
+            if (v.isEmpty()) {
                 continue;
             }
 
@@ -2580,7 +2596,7 @@ public class VarDict {
             }
 
             //position coverage by high-quality reads
-            final int hicov = calcHicov(v,iHash.get(p));
+            final int hicov = calcHicov(v, iHash.get(p));
 
             //array of all variants for the position
             List<Variant> var = new ArrayList<>();
@@ -2607,7 +2623,7 @@ public class VarDict {
                 //mean base quality for variant
                 double vqual = round(cnt.qmean / cnt.cnt, 1); // base quality
                 //mean mapping quality for variant
-                double mq = cnt.Qmean / (double)cnt.cnt; // mapping quality
+                double mq = cnt.Qmean / (double) cnt.cnt; // mapping quality
                 //number of high-quality reads for variant
                 int hicnt = cnt.hicnt;
                 //number of low-quality reads for variant
@@ -2629,18 +2645,18 @@ public class VarDict {
                 tvref.fwd = fwd;
                 tvref.rev = rev;
                 tvref.bias = String.valueOf(bias);
-                tvref.freq = cnt.cnt / (double)ttcov;
-                tvref.pmean = round(cnt.pmean / (double)cnt.cnt, 1);
+                tvref.freq = cnt.cnt / (double) ttcov;
+                tvref.pmean = round(cnt.pmean / (double) cnt.cnt, 1);
                 tvref.pstd = cnt.pstd;
                 tvref.qual = vqual;
                 tvref.qstd = cnt.qstd;
                 tvref.mapq = mq;
                 tvref.qratio = hicnt / (locnt != 0 ? locnt : 0.5d);
-                tvref.hifreq = hicov > 0 ? hicnt / (double)hicov : 0;
-                tvref.extrafreq = cnt.extracnt != 0 ? cnt.extracnt / (double)ttcov : 0;
+                tvref.hifreq = hicov > 0 ? hicnt / (double) hicov : 0;
+                tvref.extrafreq = cnt.extracnt != 0 ? cnt.extracnt / (double) ttcov : 0;
                 tvref.shift3 = 0;
                 tvref.msi = 0;
-                tvref.nm = cnt.nm / (double)cnt.cnt;
+                tvref.nm = cnt.nm / (double) cnt.cnt;
                 tvref.hicnt = hicnt;
                 tvref.hicov = hicov;
 
@@ -2683,7 +2699,7 @@ public class VarDict {
                     //mean base quality for variant
                     double vqual = round(cnt.qmean / cnt.cnt, 1); // base quality
                     //mean mapping quality for variant
-                    double mq = cnt.Qmean / (double)cnt.cnt; // mapping quality
+                    double mq = cnt.Qmean / (double) cnt.cnt; // mapping quality
                     //number of high-quality reads for variant
                     int hicnt = cnt.hicnt;
                     //number of low-quality reads for variant
@@ -2703,18 +2719,18 @@ public class VarDict {
                     tvref.fwd = fwd;
                     tvref.rev = rev;
                     tvref.bias = String.valueOf(bias);
-                    tvref.freq = cnt.cnt / (double)ttcov;
-                    tvref.pmean = round(cnt.pmean / (double)cnt.cnt, 1);
+                    tvref.freq = cnt.cnt / (double) ttcov;
+                    tvref.pmean = round(cnt.pmean / (double) cnt.cnt, 1);
                     tvref.pstd = cnt.pstd;
                     tvref.qual = vqual;
                     tvref.qstd = cnt.qstd;
                     tvref.mapq = mq;
                     tvref.qratio = hicnt / (locnt != 0 ? locnt : 0.5d);
-                    tvref.hifreq = hicov > 0 ? hicnt / (double)hicov : 0;
-                    tvref.extrafreq = cnt.extracnt != 0 ? cnt.extracnt / (double)ttcov : 0;
+                    tvref.hifreq = hicov > 0 ? hicnt / (double) hicov : 0;
+                    tvref.extrafreq = cnt.extracnt != 0 ? cnt.extracnt / (double) ttcov : 0;
                     tvref.shift3 = 0;
                     tvref.msi = 0;
-                    tvref.nm = cnt.nm / (double)cnt.cnt;
+                    tvref.nm = cnt.nm / (double) cnt.cnt;
                     tvref.hicnt = hicnt;
                     tvref.hicov = hicov;
 
@@ -2861,8 +2877,8 @@ public class VarDict {
                                 shift3 = tshift3;
                                 msint = tmsint;
                             }
-                            if (msi <= shift3 / (double)tseq1.length()) {
-                                msi = shift3 / (double)tseq1.length();
+                            if (msi <= shift3 / (double) tseq1.length()) {
+                                msi = shift3 / (double) tseq1.length();
                             }
                         }
 
@@ -2901,8 +2917,8 @@ public class VarDict {
                             shift3 = tshift3;
                             msint = tmsint;
                         }
-                        if (msi <= shift3 / (double)dellen) {
-                            msi = shift3 / (double)dellen;
+                        if (msi <= shift3 / (double) dellen) {
+                            msi = shift3 / (double) dellen;
                         }
 
                         //If no matched sequence or indel follows the variant
@@ -3118,9 +3134,10 @@ public class VarDict {
 
     /**
      * Get part of reference sequence
-     * @param region region of interest
-     * @param chrs map of chromosome lengths
-     * @param fasta file namo of reference genome in FASTA format
+     *
+     * @param region                   region of interest
+     * @param chrs                     map of chromosome lengths
+     * @param fasta                    file namo of reference genome in FASTA format
      * @param numberNucleotideToExtend number of base pairs to extend around region of interest
      * @return reference sequence map: key - position, value - base
      * @throws IOException
@@ -3147,6 +3164,7 @@ public class VarDict {
      * Find microsatellite instability
      * Tandemly repeated short sequence motifs ranging from 1– 6(8 in our case) base pairs are called microsatellites.
      * Other frequently used terms for these DNA regions are simple sequences or short tandem repeats (STRs)
+     *
      * @param tseq1
      * @param tseq2
      * @param left
@@ -3175,10 +3193,10 @@ public class VarDict {
                     msimatch = mtch.group(1);
                 }
             }
-            double curmsi = msimatch.length() / (double)nmsi;
+            double curmsi = msimatch.length() / (double) nmsi;
             mtch = Pattern.compile("^((" + msint + ")+)").matcher(tseq2);
             if (mtch.find()) {
-                curmsi += mtch.group(1).length() / (double)nmsi;
+                curmsi += mtch.group(1).length() / (double) nmsi;
             }
             if (curmsi > msicnt) {
                 maxmsi = msint;
@@ -3218,8 +3236,9 @@ public class VarDict {
 
     /**
      * Calculate strand bias flag
-     * @param fwd Variant count for forward strand
-     * @param rev Variant count for reverse strand
+     *
+     * @param fwd  Variant count for forward strand
+     * @param rev  Variant count for reverse strand
      * @param bias
      * @param minb minimum reads for bias
      * @return 0 - small total count, only one of strands, 1 - strand bias, 2 - no strand bias
@@ -3230,35 +3249,36 @@ public class VarDict {
             return fwd * rev > 0 ? 2 : 0;
         }
 
-        return (fwd / (double)(fwd + rev) >= bias && rev / (double)(fwd + rev) >= bias && fwd >= minb && rev >= minb) ? 2 : 1;
+        return (fwd / (double) (fwd + rev) >= bias && rev / (double) (fwd + rev) >= bias && fwd >= minb && rev >= minb) ? 2 : 1;
     }
 
     /**
      * this will try to realign large insertions (typically larger than 30bp)
-     * @param hash map of non-insertion variants produced by parseSAM method
-     * @param iHash map of insertion variants produced by parseSAM method
-     * @param cov coverage
+     *
+     * @param hash   map of non-insertion variants produced by parseSAM method
+     * @param iHash  map of insertion variants produced by parseSAM method
+     * @param cov    coverage
      * @param sclip5 5' softclips
      * @param sclip3 3' softclips
-     * @param ref map of reference bases
-     * @param chr chromosome name
-     * @param chrs map of chromosome lengths
-     * @param rlen max read length
-     * @param bams BAM file list
-     * @param conf configuration
+     * @param ref    map of reference bases
+     * @param chr    chromosome name
+     * @param chrs   map of chromosome lengths
+     * @param rlen   max read length
+     * @param bams   BAM file list
+     * @param conf   configuration
      * @throws IOException
      */
     static void realignlgins30(Map<Integer, Map<String, Variation>> hash,
-            Map<Integer, Map<String, Variation>> iHash,
-            Map<Integer, Integer> cov,
-            Map<Integer, Sclip> sclip5,
-            Map<Integer, Sclip> sclip3,
-            Map<Integer, Character> ref,
-            String chr,
-            Map<String, Integer> chrs,
-            int rlen,
-            String[] bams,
-            Configuration conf) throws IOException {
+                               Map<Integer, Map<String, Variation>> iHash,
+                               Map<Integer, Integer> cov,
+                               Map<Integer, Sclip> sclip5,
+                               Map<Integer, Sclip> sclip3,
+                               Map<Integer, Character> ref,
+                               String chr,
+                               Map<String, Integer> chrs,
+                               int rlen,
+                               String[] bams,
+                               Configuration conf) throws IOException {
 
         List<Tuple3<Integer, Sclip, Integer>> tmp5 = new ArrayList<>();
         for (Entry<Integer, Sclip> ent5 : sclip5.entrySet()) {
@@ -3425,11 +3445,12 @@ public class VarDict {
     /**
      * test whether the two soft-clipped reads match
      * Returns the breakpoints in 5 and 3 prime soft-clipped reads
+     *
      * @param seq5 consensus sequence 5' strand
      * @param seq3 consensus sequence 3' strand
-     * @param p5 position 5'
-     * @param p3 position 3'
-     * @param ref map of reference bases (not used)
+     * @param p5   position 5'
+     * @param p3   position 3'
+     * @param ref  map of reference bases (not used)
      * @return Tuple of (start position of 5' strand, start position of 3' strand, max match length)
      */
     static Tuple3<Integer, Integer, Integer> find35match(String seq5, String seq3, int p5, int p3, Map<Integer, Character> ref) {
@@ -3452,7 +3473,7 @@ public class VarDict {
                 }
                 if (n - nm > max
                         && n - nm > 8
-                        && nm / (double)n < 0.1d
+                        && nm / (double) n < 0.1d
                         && (n + j >= seq3.length() || i + n >= seq5.length())) {
 
                     max = n - nm;
@@ -3468,30 +3489,31 @@ public class VarDict {
 
     /**
      * Realign large insertions that are not present in alignment
-     * @param hash map of non-insertion variants produced by parseSAM method
-     * @param iHash map of insertion variants produced by parseSAM method
-     * @param cov coverage
+     *
+     * @param hash   map of non-insertion variants produced by parseSAM method
+     * @param iHash  map of insertion variants produced by parseSAM method
+     * @param cov    coverage
      * @param sclip5 5' softclips
      * @param sclip3 3' softclips
-     * @param ref map of reference bases
-     * @param chr chromosome name
-     * @param chrs map of chromosome lengths
-     * @param rlen read length
-     * @param bams BAM file list
-     * @param conf configuration
+     * @param ref    map of reference bases
+     * @param chr    chromosome name
+     * @param chrs   map of chromosome lengths
+     * @param rlen   read length
+     * @param bams   BAM file list
+     * @param conf   configuration
      * @throws IOException
      */
     static void realignlgins(Map<Integer, Map<String, Variation>> hash,
-            Map<Integer, Map<String, Variation>> iHash,
-            Map<Integer, Integer> cov,
-            Map<Integer, Sclip> sclip5,
-            Map<Integer, Sclip> sclip3,
-            Map<Integer, Character> ref,
-            String chr,
-            Map<String, Integer> chrs,
-            int rlen,
-            String[] bams,
-            Configuration conf) throws IOException {
+                             Map<Integer, Map<String, Variation>> iHash,
+                             Map<Integer, Integer> cov,
+                             Map<Integer, Sclip> sclip5,
+                             Map<Integer, Sclip> sclip3,
+                             Map<Integer, Character> ref,
+                             String chr,
+                             Map<String, Integer> chrs,
+                             int rlen,
+                             String[] bams,
+                             Configuration conf) throws IOException {
 
         List<Tuple2<Integer, Sclip>> tmp = new ArrayList<>();
         for (Entry<Integer, Sclip> ent5 : sclip5.entrySet()) {
@@ -3661,11 +3683,12 @@ public class VarDict {
 
     /**
      * Find the insertion
-     * @param seq sequence
-     * @param p position
-     * @param ref map of reference bases
-     * @param dir direction
-     * @param chr chromosome name
+     *
+     * @param seq  sequence
+     * @param p    position
+     * @param ref  map of reference bases
+     * @param dir  direction
+     * @param chr  chromosome name
      * @param chrs map of chromosome lengths
      * @return Tuple of (BI (insert starting position), INS (insert sequence), BI2 ( = BI))
      */
@@ -3704,7 +3727,7 @@ public class VarDict {
             if (mnt < 2) { // at least three different NT for overhang sequences, weeding out low complexity seq
                 continue;
             }
-            if ((mnt >= 3 && i + n >= seq.length() - 1 && i >= 8 && mm / (double)i < 0.15)
+            if ((mnt >= 3 && i + n >= seq.length() - 1 && i >= 8 && mm / (double) i < 0.15)
                     || (mnt >= 2 && mm == 0 && i + n == seq.length() && n >= 20 && i >= 8)) {
 
                 StringBuilder insert = new StringBuilder(substr(seq, 0, n));
@@ -3783,7 +3806,8 @@ public class VarDict {
 
     /**
      * Adjust the insertion position if necessary
-     * @param bi starting position of insert
+     *
+     * @param bi  starting position of insert
      * @param ins insert sequence
      * @param ref map of reference bases
      * @return Tuple of (int bi, String ins, int bi)
@@ -3828,28 +3852,29 @@ public class VarDict {
 
     /**
      * Realign large deletions that are not present in alignment
-     * @param hash variant structure produced by parseSam method
-     * @param cov coverage
+     *
+     * @param hash   variant structure produced by parseSam method
+     * @param cov    coverage
      * @param sclip5 5' softclips
      * @param sclip3 3' softclips
-     * @param ref map of reference bases
-     * @param chr chromosome name
-     * @param chrs map of chromosome lengths
-     * @param rlen read length
-     * @param bams BAM file list
-     * @param conf configuration
+     * @param ref    map of reference bases
+     * @param chr    chromosome name
+     * @param chrs   map of chromosome lengths
+     * @param rlen   read length
+     * @param bams   BAM file list
+     * @param conf   configuration
      * @throws IOException
      */
     static void realignlgdel(Map<Integer, Map<String, Variation>> hash,
-            Map<Integer, Integer> cov,
-            Map<Integer, Sclip> sclip5,
-            Map<Integer, Sclip> sclip3,
-            Map<Integer, Character> ref,
-            String chr,
-            Map<String, Integer> chrs,
-            final int rlen,
-            String[] bams,
-            Configuration conf) throws IOException {
+                             Map<Integer, Integer> cov,
+                             Map<Integer, Sclip> sclip5,
+                             Map<Integer, Sclip> sclip3,
+                             Map<Integer, Character> ref,
+                             String chr,
+                             Map<String, Integer> chrs,
+                             final int rlen,
+                             String[] bams,
+                             Configuration conf) throws IOException {
 
         final int longmm = 3;
 
@@ -4094,21 +4119,22 @@ public class VarDict {
 
     /**
      * Find breakpoint
-     * @param seq sequence
-     * @param sp start position of sequence
-     * @param ref map of reference bases
-     * @param dis distance (always = $INDELSIZE)
-     * @param dir direction
-     * @param chr chromosome name
-     * @param chrs map of chromosome lengths
+     *
+     * @param seq      sequence
+     * @param sp       start position of sequence
+     * @param ref      map of reference bases
+     * @param dis      distance (always = $INDELSIZE)
+     * @param dir      direction
+     * @param chr      chromosome name
+     * @param chrs     map of chromosome lengths
      * @param debugLog print debug message if true
      * @return breakpoint position
      */
     static int findbp(String seq, int sp,
-            Map<Integer, Character> ref,
-            int dis, int dir, String chr,
-            Map<String, Integer> chrs,
-            boolean debugLog) {
+                      Map<Integer, Character> ref,
+                      int dis, int dir, String chr,
+                      Map<String, Integer> chrs,
+                      boolean debugLog) {
 
         final int maxmm = 3; // maximum mismatches allowed
         int bp = 0;
@@ -4137,7 +4163,7 @@ public class VarDict {
             if (m.size() < 3) {
                 continue;
             }
-            if (mm <= maxmm - n / 100 && i >= seq.length() - 2 && i >= 8 + n / 10 && mm / (double)i < 0.12) {
+            if (mm <= maxmm - n / 100 && i >= seq.length() - 2 && i >= 8 + n / 10 && mm / (double) i < 0.12) {
                 int lbp = sp + dir * n - (dir < 0 ? dir : 0);
                 if (mm == 0 && i == seq.length()) {
                     if (debugLog) {
@@ -4169,9 +4195,10 @@ public class VarDict {
 
     /**
      * If any of the base is represented by 75%, it's a low complexity seq
-     *
+     * <p>
      * Low-complexity sequences are simple repeats such as ATATATATAT
      * or regions that are highly enriched for just one letter, e.g. AAACAAAAAAAAGAAAAAAC.
+     *
      * @param seq sequence
      * @return true if sequence has low complexity
      */
@@ -4179,13 +4206,13 @@ public class VarDict {
         int len = seq.length();
         if (len == 0)
             return true;
-        if (count(seq, 'A') / (double)len > 0.75)
+        if (count(seq, 'A') / (double) len > 0.75)
             return true;
-        if (count(seq, 'T') / (double)len > 0.75)
+        if (count(seq, 'T') / (double) len > 0.75)
             return true;
-        if (count(seq, 'G') / (double)len > 0.75)
+        if (count(seq, 'G') / (double) len > 0.75)
             return true;
-        return count(seq, 'C') / (double)len > 0.75;
+        return count(seq, 'C') / (double) len > 0.75;
     }
 
     private static List<Object[]> fillTmp(Map<Integer, Map<String, Integer>> changes) {
@@ -4201,7 +4228,7 @@ public class VarDict {
                 // if (mtch.find()) {
                 // ecnt = mtch.group(1).length();
                 // }
-                tmp.add(new Object[] { p, vn, cnt, /* ecnt */});
+                tmp.add(new Object[]{p, vn, cnt, /* ecnt */});
             }
         }
         Collections.sort(tmp, REALIGNDEL_COMPARATOR);
@@ -4222,18 +4249,18 @@ public class VarDict {
     private static final Comparator<Object[]> REALIGNDEL_COMPARATOR = new Comparator<Object[]>() {
         @Override
         public int compare(Object[] o1, Object[] o2) {
-            int x1 = (Integer)o1[2];
-            int x2 = (Integer)o2[2];
+            int x1 = (Integer) o1[2];
+            int x2 = (Integer) o2[2];
             int f = Integer.compare(x2, x1);
             if (f != 0)
                 return f;
-            x1 = (Integer)o1[0];
-            x2 = (Integer)o2[0];
-            f =  Integer.compare(x1, x2);
+            x1 = (Integer) o1[0];
+            x2 = (Integer) o2[0];
+            f = Integer.compare(x1, x2);
             if (f != 0)
                 return f;
-            String s1 = (String)o1[1];
-            String s2 = (String)o2[1];
+            String s1 = (String) o1[1];
+            String s2 = (String) o2[1];
             return s2.compareTo(s1);
 
         }
@@ -4241,33 +4268,34 @@ public class VarDict {
 
     /**
      * Realign insertions
-     * @param hash map of non-insertion variants produced by parseSAM method
-     * @param iHash map of insertion variants produced by parseSAM method
-     * @param ins insertion variants
-     * @param cov coverage
+     *
+     * @param hash   map of non-insertion variants produced by parseSAM method
+     * @param iHash  map of insertion variants produced by parseSAM method
+     * @param ins    insertion variants
+     * @param cov    coverage
      * @param sclip5 5' softclips
      * @param sclip3 3' softclips
-     * @param ref map of reference bases
-     * @param chr chromosome name
-     * @param chrs map of chromosome lengths
-     * @param conf configuration
+     * @param ref    map of reference bases
+     * @param chr    chromosome name
+     * @param chrs   map of chromosome lengths
+     * @param conf   configuration
      */
     static void realignins(Map<Integer, Map<String, Variation>> hash,
-            Map<Integer, Map<String, Variation>> iHash,
-            Map<Integer, Map<String, Integer>> ins,
-            Map<Integer, Integer> cov,
-            Map<Integer, Sclip> sclip5,
-            Map<Integer, Sclip> sclip3,
-            Map<Integer, Character> ref,
-            String chr,
-            Map<String, Integer> chrs,
-            Configuration conf) {
+                           Map<Integer, Map<String, Variation>> iHash,
+                           Map<Integer, Map<String, Integer>> ins,
+                           Map<Integer, Integer> cov,
+                           Map<Integer, Sclip> sclip5,
+                           Map<Integer, Sclip> sclip3,
+                           Map<Integer, Character> ref,
+                           String chr,
+                           Map<String, Integer> chrs,
+                           Configuration conf) {
 
         List<Object[]> tmp = fillTmp(ins);
         for (Object[] objects : tmp) {
-            Integer p = (Integer)objects[0];
-            String vn = (String)objects[1];
-            Integer icnt = (Integer)objects[2];
+            Integer p = (Integer) objects[0];
+            String vn = (String) objects[1];
+            Integer icnt = (Integer) objects[2];
             if (conf.y) {
                 System.err.println(format("  Realign Ins: %s %s %s", p, vn, icnt));
             }
@@ -4328,7 +4356,7 @@ public class VarDict {
             which affect the formation of the 3' end of the message. It may also contain enhancers or other sites to which proteins may bind.
              */
             MMResult findMM3 = findMM3(ref, p + 1, sanpseq, insert.length() + compm.length(), sclip3); // mismatches, mismatch
-                                                                                                       // positions, 5 or 3 ends
+            // positions, 5 or 3 ends
             MMResult findMM5 = findMM5(ref, p + extra.length() + compm.length() + newdel, wupseq, insert.length() + compm.length(), sclip5);
 
             List<Tuple3<String, Integer, Integer>> mm3 = findMM3.mm;
@@ -4458,8 +4486,8 @@ public class VarDict {
         }
 
         for (Object[] objects : tmp) {
-            Integer p = (Integer)objects[0];
-            String vn = (String)objects[1];
+            Integer p = (Integer) objects[0];
+            String vn = (String) objects[1];
             if (!iHash.containsKey(p)) {
                 continue;
             }
@@ -4484,38 +4512,39 @@ public class VarDict {
 
     /**
      * Realign deletions if already present in alignment
-     * @param hash variant structure produced by parseSam method
-     * @param dels5 deletion variants
-     * @param cov coverage
+     *
+     * @param hash   variant structure produced by parseSam method
+     * @param dels5  deletion variants
+     * @param cov    coverage
      * @param sclip5 5' softclips
      * @param sclip3 3' softclips
-     * @param ref map of reference bases
-     * @param chr chromosome name
-     * @param chrs map of chromosome lengths
-     * @param rlen read length
-     * @param bams BAM file list
-     * @param conf configuration
+     * @param ref    map of reference bases
+     * @param chr    chromosome name
+     * @param chrs   map of chromosome lengths
+     * @param rlen   read length
+     * @param bams   BAM file list
+     * @param conf   configuration
      * @throws IOException
      */
     static void realigndel(Map<Integer, Map<String, Variation>> hash,
-            Map<Integer, Map<String, Integer>> dels5,
-            Map<Integer, Integer> cov,
-            Map<Integer, Sclip> sclip5,
-            Map<Integer, Sclip> sclip3,
-            Map<Integer, Character> ref,
-            String chr,
-            Map<String, Integer> chrs,
-            final int rlen,
-            String[] bams,
-            Configuration conf) throws IOException {
+                           Map<Integer, Map<String, Integer>> dels5,
+                           Map<Integer, Integer> cov,
+                           Map<Integer, Sclip> sclip5,
+                           Map<Integer, Sclip> sclip3,
+                           Map<Integer, Character> ref,
+                           String chr,
+                           Map<String, Integer> chrs,
+                           final int rlen,
+                           String[] bams,
+                           Configuration conf) throws IOException {
 
         // int longmm = 3; //Longest continued mismatches typical aligned at the end
         List<Object[]> tmp = fillTmp(dels5);
 
         for (Object[] objects : tmp) {
-            Integer p = (Integer)objects[0];
-            String vn = (String)objects[1];
-            Integer dcnt = (Integer)objects[2];
+            Integer p = (Integer) objects[0];
+            String vn = (String) objects[1];
+            Integer dcnt = (Integer) objects[2];
             if (conf.y) {
                 System.err.printf("  Realigndel for: %s %s %s cov: %s\n", p, vn, dcnt, cov.get(p));
             }
@@ -4605,11 +4634,11 @@ public class VarDict {
                 }
                 // Adjust ref cnt so that AF won't > 1
                 if (mp > p && me == 5) {
-                    double f = tv.pmean != 0 ? (mp - p) / (tv.pmean / (double)tv.cnt) : 1;
+                    double f = tv.pmean != 0 ? (mp - p) / (tv.pmean / (double) tv.cnt) : 1;
                     if (f > 1) {
                         f = 1;
                     }
-                    incCnt(cov, p, (int)(tv.cnt * f));
+                    incCnt(cov, p, (int) (tv.cnt * f));
                     adjRefCnt(tv, getVariationMaybe(hash, p, ref.get(p)), dellen);
                 }
                 Variation lref = (mp > p && me == 3) ? (hash.containsKey(p) && hash.get(p).containsKey(ref.get(p).toString()) ? hash.get(p).get(ref.get(p).toString()) : null) : null;
@@ -4681,7 +4710,7 @@ public class VarDict {
                     && pe - p < rlen - 10
                     && h != null && h.cnt != 0
                     && noPassingReads(chr, p, pe, bams, conf)
-                    && vref.cnt > 2 * h.cnt * (1 - (pe - p) / (double)rlen)) {
+                    && vref.cnt > 2 * h.cnt * (1 - (pe - p) / (double) rlen)) {
 
                 adjCnt(vref, h, h, conf);
             }
@@ -4690,8 +4719,8 @@ public class VarDict {
 
         for (int i = tmp.size() - 1; i >= 0; i--) {
             Object[] os = tmp.get(i);
-            int p = (Integer)os[0];
-            String vn = (String)os[1];
+            int p = (Integer) os[0];
+            String vn = (String) os[1];
             if (!hash.containsKey(p)) {
                 continue;
             }
@@ -4718,9 +4747,10 @@ public class VarDict {
     /**
      * check whether there're reads supporting wild type in deletions
      * Only for indels that have micro-homology
-     * @param chr chromosome name
-     * @param s start position
-     * @param e end position
+     *
+     * @param chr  chromosome name
+     * @param s    start position
+     * @param e    end position
      * @param bams BAM file list
      * @param conf configuration
      * @return true if any read was found in chr:s-e
@@ -4741,7 +4771,7 @@ public class VarDict {
                     }
                     int rs = record.getAlignmentStart();
                     int rlen = getAlignedLenght(record.getCigar()); // The total aligned length, excluding soft-clipped bases and
-                                                                      // insertions
+                    // insertions
                     int re = rs + rlen;
                     if (re > e + 2 && rs < s - 2) {
                         cnt++;
@@ -4761,9 +4791,10 @@ public class VarDict {
 
     /**
      * Find if sequences match
-     * @param seq1 first sequence
-     * @param seq2 second sequence
-     * @param dir direction of seq2 (1 or -1)
+     *
+     * @param seq1     first sequence
+     * @param seq2     second sequence
+     * @param dir      direction of seq2 (1 or -1)
      * @param debugLog print debug message if true
      * @return true if seq1 matches seq2 with no more than 2 mismathes
      */
@@ -4781,13 +4812,14 @@ public class VarDict {
             }
         }
 
-        return (mm <= 2 && mm / (double)seq1.length() < 0.15);
+        return (mm <= 2 && mm / (double) seq1.length() < 0.15);
     }
 
     /**
      * Find the consensus sequence in soft-clipped reads. Consensus is called if
      * the matched nucleotides are &gt;90% of all softly clipped nucleotides.
-     * @param scv soft-clipped sequences
+     *
+     * @param scv      soft-clipped sequences
      * @param debugLog print debug message if true
      * @return consensus sequence
      */
@@ -4817,7 +4849,7 @@ public class VarDict {
                     maxq = scv.seq.get(i).get(nt).qmean;
                 }
             }
-            if ((tt - max > 2 || max <= tt - max) && max / (double)tt < 0.8) {
+            if ((tt - max > 2 || max <= tt - max) && max / (double) tt < 0.8) {
                 if (flag)
                     break;
                 flag = true;
@@ -4831,11 +4863,11 @@ public class VarDict {
 
         Integer ntSize = scv.nt.lastKey();
         if (total != 0
-                && match / (double)total > 0.9
+                && match / (double) total > 0.9
                 && seq.length() / 1.5 > ntSize - seq.length()
-                && (seq.length() / (double)ntSize > 0.8
-                        || ntSize - seq.length() < 10
-                        || seq.length() > 25)) {
+                && (seq.length() / (double) ntSize > 0.8
+                || ntSize - seq.length() < 10
+                || seq.length() > 25)) {
             scv.sequence = seq.toString();
         } else {
             scv.sequence = "";
@@ -4849,10 +4881,11 @@ public class VarDict {
 
     /**
      * Given a variant sequence, find the mismatches and potential softclipping positions
-     * @param ref map of reference bases
-     * @param p position
+     *
+     * @param ref    map of reference bases
+     * @param p      position
      * @param wupseq sequence
-     * @param len not used
+     * @param len    not used
      * @param sclip5 map of 5' softclips
      * @return
      */
@@ -4924,11 +4957,12 @@ public class VarDict {
 
     /**
      * Given a variant sequence, find the mismatches and potential softclipping positions
-     * @param ref map of reference bases
-     * @param p position
+     *
+     * @param ref     map of reference bases
+     * @param p       position
      * @param sanpseq sequence
-     * @param len not used
-     * @param sclip3 map of 3' softclips
+     * @param len     not used
+     * @param sclip3  map of 3' softclips
      * @return array of [str (mismatches), Tbp (soft clip start position), 3], sc3p - array of soft clip positions, mn - number of nucleotides to adjust
      */
     static MMResult findMM3(Map<Integer, Character> ref, int p, String sanpseq, int len, Map<Integer, Sclip> sclip3) {
@@ -4988,9 +5022,10 @@ public class VarDict {
 
     /**
      * Construct reference sequence
-     * @param ref map of reference bases
+     *
+     * @param ref  map of reference bases
      * @param from start position
-     * @param to end position
+     * @param to   end position
      * @return reference sequence starting at from and ending at to
      */
     private static String joinRef(Map<Integer, Character> ref, int from, int to) {
@@ -5006,9 +5041,9 @@ public class VarDict {
 
     // Find closest mismatches to combine with indels
     private static Tuple4<Integer, String, String, Integer> finndOffset(int refp, int readp, int mlen, String rdseq, String qstr,
-            Map<Integer, Character> ref,
-            Map<Integer, Integer> cov,
-            int vext, int goodq) {
+                                                                        Map<Integer, Character> ref,
+                                                                        Map<Integer, Integer> cov,
+                                                                        int vext, int goodq) {
         int offset = 0;
         String ss = "";
         String q = "";
@@ -5047,17 +5082,18 @@ public class VarDict {
 
     /**
      * Adjust MNP when there're breakpoints within MNP (multi-nucleotide polymorphism)
-     * @param hash map of variants produced by parseSAM method
-     * @param mnp map of MNP variants
-     * @param cov coverage
+     *
+     * @param hash   map of variants produced by parseSAM method
+     * @param mnp    map of MNP variants
+     * @param cov    coverage
      * @param ref
      * @param sclip5
      * @param sclip3
-     * @param conf configuration
+     * @param conf   configuration
      */
     static void adjMNP(Map<Integer, Map<String, Variation>> hash,
-            Map<Integer, Map<String, Integer>> mnp,
-            Map<Integer, Integer> cov, Map<Integer, Character> ref, Map<Integer, Sclip> sclip3, Map<Integer, Sclip> sclip5, Configuration conf) {
+                       Map<Integer, Map<String, Integer>> mnp,
+                       Map<Integer, Integer> cov, Map<Integer, Character> ref, Map<Integer, Sclip> sclip3, Map<Integer, Sclip> sclip5, Configuration conf) {
 
         for (Map.Entry<Integer, Map<String, Integer>> entry : mnp.entrySet()) {
             final Integer p = entry.getKey();
@@ -5070,7 +5106,7 @@ public class VarDict {
                     continue;
                 }
                 final Variation vref = hashP.get(vn);
-                if (vref == null ) { // The variant is likely already been used by indel realignment
+                if (vref == null) { // The variant is likely already been used by indel realignment
                     continue;
                 }
                 final String mnt = vn.replaceFirst("&", "");
@@ -5109,7 +5145,7 @@ public class VarDict {
                     if (!sc3v.used) {
                         final String seq = findconseq(sc3v, conf.y);
                         if (seq.startsWith(mnt)) {
-                            if(seq.length() == mnt.length() || ismatchref(seq.substring(mnt.length()), ref, p + mnt.length(), 1, conf.y)) {
+                            if (seq.length() == mnt.length() || ismatchref(seq.substring(mnt.length()), ref, p + mnt.length(), 1, conf.y)) {
                                 adjCnt(hash.get(p).get(vn), sc3v, conf);
                                 incCnt(cov, p, sc3v.cnt);
                                 sc3v.used = true;
@@ -5120,9 +5156,9 @@ public class VarDict {
                 if (sclip5.containsKey(p + mnt.length())) {
                     final Sclip sc5v = sclip5.get(p + mnt.length());
                     if (!sc5v.used) {
-                        String seq =  findconseq(sc5v, conf.y);
+                        String seq = findconseq(sc5v, conf.y);
                         if (!seq.isEmpty() && seq.length() >= mnt.length()) {
-                            seq =  new StringBuffer(seq).reverse().toString();
+                            seq = new StringBuffer(seq).reverse().toString();
                             if (seq.endsWith(mnt)) {
                                 if (seq.length() == mnt.length() || ismatchref(seq.substring(0, seq.length() - mnt.length()), ref, p - 1, -1, conf.y)) {
                                     adjCnt(hash.get(p).get(vn), sc5v, conf);
@@ -5150,13 +5186,14 @@ public class VarDict {
                 mm++;
             }
         }
-        return mm <= 3 && mm / (double)seq.length() < 0.15;
+        return mm <= 3 && mm / (double) seq.length() < 0.15;
     }
 
     /**
      * Adjust count. Don't adjust reference
+     *
      * @param vref variant to add counts
-     * @param tv variant
+     * @param tv   variant
      * @param conf configuration
      */
     private static void adjCnt(Variation vref, Variation tv, Configuration conf) {
@@ -5166,9 +5203,10 @@ public class VarDict {
     /**
      * Adjust the count,  If ref is not null, the count for reference is also adjusted.
      * Variant counts of tv are added to vref and removed from ref
+     *
      * @param vref variant to add counts
-     * @param tv variant
-     * @param ref reference variant
+     * @param tv   variant
+     * @param ref  reference variant
      * @param conf configuration
      */
     private static void adjCnt(Variation vref, Variation tv, Variation ref, Configuration conf) {
@@ -5208,6 +5246,7 @@ public class VarDict {
 
     /**
      * correct counts for negative values
+     *
      * @param ref variant
      */
     private static void correctCnt(Variation ref) {
@@ -5231,7 +5270,8 @@ public class VarDict {
 
     /**
      * Adjust the reference count.
-     * @param tv non-reference variant
+     *
+     * @param tv  non-reference variant
      * @param ref reference variant
      * @param len length for adhustment factor
      */
@@ -5239,7 +5279,7 @@ public class VarDict {
         if (ref == null) {
             return;
         }
-        double f = tv.pmean != 0 ? (tv.pmean / (double)tv.cnt - len + 1) / (tv.pmean / (double)tv.cnt) : 0; // the adjustment factor
+        double f = tv.pmean != 0 ? (tv.pmean / (double) tv.cnt - len + 1) / (tv.pmean / (double) tv.cnt) : 0; // the adjustment factor
         if (f < 0) {
             return;
         }
@@ -5255,8 +5295,8 @@ public class VarDict {
         ref.qmean -= f * tv.qmean;
         ref.Qmean -= f * tv.Qmean;
         ref.nm -= f * tv.nm;
-        ref.subDir(true, (int)(f * tv.getDir(true)));
-        ref.subDir(false, (int)(f * tv.getDir(false)));
+        ref.subDir(true, (int) (f * tv.getDir(true)));
+        ref.subDir(false, (int) (f * tv.getDir(false)));
         correctCnt(ref);
     }
 
@@ -5291,128 +5331,128 @@ public class VarDict {
 
     }
 
-    private static class ToVarsWorker implements Callable<Tuple2<Integer, Map<Integer, Vars>>> {
-        final Region region;
-        final String bam;
-        final Map<String, Integer> chrs;
-        final String sample;
-        final Set<String> splice;
-        final String ampliconBasedCalling;
-        final Configuration conf;
-        Map<Integer, Character> ref;
+//    private static class ToVarsWorker implements Callable<Tuple2<Integer, Map<Integer, Vars>>> {
+//        final Region region;
+//        final String bam;
+//        final Map<String, Integer> chrs;
+//        final String sample;
+//        final Set<String> splice;
+//        final String ampliconBasedCalling;
+//        final Configuration conf;
+//        Map<Integer, Character> ref;
+//
+//        public ToVarsWorker(Region region, String bam, Map<String, Integer> chrs, String sample, Set<String> splice, String ampliconBasedCalling, Map<Integer, Character> ref, Configuration conf) {
+//            super();
+//            this.region = region;
+//            this.bam = bam;
+//            this.chrs = chrs;
+//            this.sample = sample;
+//            this.splice = splice;
+//            this.ampliconBasedCalling = ampliconBasedCalling;
+//            this.conf = conf;
+//            this.ref = ref;
+//        }
+//
+////        @Override
+////        public Tuple2<Integer, Map<Integer, Vars>> call() throws Exception {
+////            if (ref == null)
+////                ref = getREF(region, chrs, conf.fasta, conf.numberNucleotideToExtend);
+////            return toVars(region, bam, ref, chrs, sample, splice, ampliconBasedCalling, 0, conf);
+////        }
+//
+//    }
 
-        public ToVarsWorker(Region region, String bam, Map<String, Integer> chrs, String sample, Set<String> splice, String ampliconBasedCalling, Map<Integer, Character> ref, Configuration conf) {
-            super();
-            this.region = region;
-            this.bam = bam;
-            this.chrs = chrs;
-            this.sample = sample;
-            this.splice = splice;
-            this.ampliconBasedCalling = ampliconBasedCalling;
-            this.conf = conf;
-            this.ref = ref;
-        }
+//    private static class SomdictWorker implements Callable<OutputStream> {
+//
+//        final Future<Tuple2<Integer, Map<Integer, Vars>>> first;
+//        final ToVarsWorker second;
+//        final String sample;
+//
+//        public SomdictWorker(Region region, String bam, Map<String, Integer> chrs, Set<String> splice, String ampliconBasedCalling, Map<Integer, Character> ref, Configuration conf,
+//                             Future<Tuple2<Integer, Map<Integer, Vars>>> first,
+//                             String sample) {
+//            this.first = first;
+//            this.second = new ToVarsWorker(region, bam, chrs, sample, splice, ampliconBasedCalling, ref, conf);
+//            this.sample = sample;
+//        }
+//
+//        @Override
+//        public OutputStream call() throws Exception {
+//            Tuple2<Integer, Map<Integer, Vars>> t2 = second.call();
+//            Tuple2<Integer, Map<Integer, Vars>> t1 = first.get();
+//            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+//            PrintStream out = new PrintStream(baos);
+//            somdict(second.region, t1._2, t2._2, sample, second.chrs, second.splice, second.ampliconBasedCalling, Math.max(t1._1, t2._1), second.conf, out);
+//            out.close();
+//            return baos;
+//        }
+//
+//    }
 
-        @Override
-        public Tuple2<Integer, Map<Integer, Vars>> call() throws Exception {
-            if (ref == null)
-                ref = getREF(region, chrs, conf.fasta, conf.numberNucleotideToExtend);
-            return toVars(region, bam, ref, chrs, sample, splice, ampliconBasedCalling, 0, conf);
-        }
+//    private static class VardictWorker implements Callable<OutputStream> {
+//
+//        final String sample;
+//        private Region region;
+//        private Configuration conf;
+//        private Map<String, Integer> chrs;
+//        private Set<String> splice;
+//        private String ampliconBasedCalling;
+//
+//        public VardictWorker(Region region, Map<String, Integer> chrs, Set<String> splice, String ampliconBasedCalling, String sample, Configuration conf) {
+//            super();
+//            this.region = region;
+//            this.chrs = chrs;
+//            this.splice = splice;
+//            this.ampliconBasedCalling = ampliconBasedCalling;
+//            this.sample = sample;
+//            this.conf = conf;
+//        }
+//
+////        @Override
+////        public OutputStream call() throws Exception {
+////            Map<Integer, Character> ref = getREF(region, chrs, conf.fasta, conf.numberNucleotideToExtend);
+////            Tuple2<Integer, Map<Integer, Vars>> tpl = toVars(region, conf.bam.getBam1(), ref, chrs, sample, splice, ampliconBasedCalling, 0, conf);
+////            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+////            PrintStream out = new PrintStream(baos);
+////            vardict(region, tpl._2, sample, splice, conf, out);
+////            out.close();
+////            return baos;
+////        }
+//
+//    }
 
-    }
-
-    private static class SomdictWorker implements Callable<OutputStream> {
-
-        final Future<Tuple2<Integer, Map<Integer, Vars>>> first;
-        final ToVarsWorker second;
-        final String sample;
-
-        public SomdictWorker(Region region, String bam, Map<String, Integer> chrs, Set<String> splice, String ampliconBasedCalling, Map<Integer, Character> ref, Configuration conf,
-                Future<Tuple2<Integer, Map<Integer, Vars>>> first,
-                String sample) {
-            this.first = first;
-            this.second = new ToVarsWorker(region, bam, chrs, sample, splice, ampliconBasedCalling, ref, conf);
-            this.sample = sample;
-        }
-
-        @Override
-        public OutputStream call() throws Exception {
-            Tuple2<Integer, Map<Integer, Vars>> t2 = second.call();
-            Tuple2<Integer, Map<Integer, Vars>> t1 = first.get();
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            PrintStream out = new PrintStream(baos);
-            somdict(second.region, t1._2, t2._2, sample, second.chrs, second.splice, second.ampliconBasedCalling, Math.max(t1._1, t2._1), second.conf, out);
-            out.close();
-            return baos;
-        }
-
-    }
-
-    private static class VardictWorker implements Callable<OutputStream> {
-
-        final String sample;
-        private Region region;
-        private Configuration conf;
-        private Map<String, Integer> chrs;
-        private Set<String> splice;
-        private String ampliconBasedCalling;
-
-        public VardictWorker(Region region, Map<String, Integer> chrs, Set<String> splice, String ampliconBasedCalling, String sample, Configuration conf) {
-            super();
-            this.region = region;
-            this.chrs = chrs;
-            this.splice = splice;
-            this.ampliconBasedCalling = ampliconBasedCalling;
-            this.sample = sample;
-            this.conf = conf;
-        }
-
-        @Override
-        public OutputStream call() throws Exception {
-            Map<Integer, Character> ref = getREF(region, chrs, conf.fasta, conf.numberNucleotideToExtend);
-            Tuple2<Integer, Map<Integer, Vars>> tpl = toVars(region, conf.bam.getBam1(), ref, chrs, sample, splice, ampliconBasedCalling, 0, conf);
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            PrintStream out = new PrintStream(baos);
-            vardict(region, tpl._2, sample, splice, conf, out);
-            out.close();
-            return baos;
-        }
-
-    }
-
-    private static class AmpVardictWorker implements Callable<OutputStream> {
-        final Map<Integer, List<Tuple2<Integer, Region>>> pos;
-        final Region rg;
-        final List<Future<Tuple2<Integer, Map<Integer, Vars>>>> workers;
-        final ToVarsWorker worker;
-        final String sample;
-
-        public AmpVardictWorker(Map<Integer, List<Tuple2<Integer, Region>>> pos, Region rg, String sample, List<Future<Tuple2<Integer,
-                Map<Integer, Vars>>>> workers,
-                ToVarsWorker worker) {
-            this.pos = pos;
-            this.rg = rg;
-            this.workers = workers;
-            this.worker = worker;
-            this.sample = sample;
-        }
-
-        @Override
-        public OutputStream call() throws Exception {
-            Tuple2<Integer, Map<Integer, Vars>> last = worker.call();
-            List<Map<Integer, Vars>> vars = new ArrayList<>();
-            for (Future<Tuple2<Integer, Map<Integer, Vars>>> future : workers) {
-                vars.add(future.get()._2);
-            }
-            vars.add(last._2);
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            PrintStream out = new PrintStream(baos);
-            ampVardict(rg, vars, pos, sample, worker.splice, worker.conf, out);
-            out.close();
-            return baos;
-        }
-    }
+//    private static class AmpVardictWorker implements Callable<OutputStream> {
+//        final Map<Integer, List<Tuple2<Integer, Region>>> pos;
+//        final Region rg;
+//        final List<Future<Tuple2<Integer, Map<Integer, Vars>>>> workers;
+//        final ToVarsWorker worker;
+//        final String sample;
+//
+//        public AmpVardictWorker(Map<Integer, List<Tuple2<Integer, Region>>> pos, Region rg, String sample, List<Future<Tuple2<Integer,
+//                Map<Integer, Vars>>>> workers,
+//                                ToVarsWorker worker) {
+//            this.pos = pos;
+//            this.rg = rg;
+//            this.workers = workers;
+//            this.worker = worker;
+//            this.sample = sample;
+//        }
+//
+//        @Override
+//        public OutputStream call() throws Exception {
+//            Tuple2<Integer, Map<Integer, Vars>> last = worker.call();
+//            List<Map<Integer, Vars>> vars = new ArrayList<>();
+//            for (Future<Tuple2<Integer, Map<Integer, Vars>>> future : workers) {
+//                vars.add(future.get()._2);
+//            }
+//            vars.add(last._2);
+//            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+//            PrintStream out = new PrintStream(baos);
+//            ampVardict(rg, vars, pos, sample, worker.splice, worker.conf, out);
+//            out.close();
+//            return baos;
+//        }
+//    }
 
     final static Future<OutputStream> NULL_FUTURE = new FutureTask<>(new Callable<OutputStream>() {
         @Override
@@ -5421,105 +5461,103 @@ public class VarDict {
         }
     });
 
-    private static void ampVardictParallel(final List<List<Region>> segs, final Map<String, Integer> chrs, final String ampliconBasedCalling,
-            final String bam1, final String sample, final Configuration conf) throws IOException {
+//    private static void ampVardictParallel(final List<List<Region>> segs, final Map<String, Integer> chrs, final String ampliconBasedCalling,
+//                                           final String bam1, final String sample, final Configuration conf) throws IOException {
+//
+//        final ExecutorService executor = new ForkJoinPool(); //Executors.newFixedThreadPool(conf.threads);
+//        final BlockingQueue<Future<OutputStream>> toPrint = new LinkedBlockingQueue<>(21);
+//
+//        executor.submit(new Runnable() {
+//            @Override
+//            public void run() {
+//                try {
+//                    for (List<Region> regions : segs) {
+//                        Map<Integer, List<Tuple2<Integer, Region>>> pos = new HashMap<>();
+//                        int j = 0;
+//                        Region rg = null;
+//                        List<Future<Tuple2<Integer, Map<Integer, Vars>>>> workers = new ArrayList<>(regions.size() - 1);
+//                        final Set<String> splice = new ConcurrentHashSet<>();
+//                        for (Region region : regions) {
+//                            rg = region; // ??
+//                            for (int p = region.istart; p <= region.iend; p++) {
+//                                List<Tuple2<Integer, Region>> list = pos.get(p);
+//                                if (list == null) {
+//                                    list = new ArrayList<>();
+//                                    pos.put(p, list);
+//                                }
+//                                list.add(tuple(j, region));
+//                            }
+//                            ToVarsWorker toVars = new ToVarsWorker(region, bam1, chrs, sample, splice, ampliconBasedCalling, null, conf);
+//                            if (workers.size() == regions.size() - 1) {
+//                                toPrint.put(executor.submit(new AmpVardictWorker(pos, rg, sample, workers, toVars)));
+//                            } else {
+//                                workers.add(executor.submit(toVars));
+//                            }
+//                            j++;
+//
+//                        }
+//                    }
+//                    toPrint.put(NULL_FUTURE);
+//                } catch (InterruptedException e) {
+//                    e.printStackTrace();
+//                }
+//            }
+//        });
+//
+//        try {
+//            while (true) {
+//                Future<OutputStream> seg = toPrint.take();
+//                if (seg == NULL_FUTURE) {
+//                    break;
+//                }
+//                System.out.print(seg.get());
+//            }
+//        } catch (InterruptedException | ExecutionException e) {
+//            e.printStackTrace();
+//        }
+//        executor.shutdown();
+//    }
 
-        final ExecutorService executor = new ForkJoinPool(); //Executors.newFixedThreadPool(conf.threads);
-        final BlockingQueue<Future<OutputStream>> toPrint = new LinkedBlockingQueue<>(21);
-
-        executor.submit(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    for (List<Region> regions : segs) {
-                        Map<Integer, List<Tuple2<Integer, Region>>> pos = new HashMap<>();
-                        int j = 0;
-                        Region rg = null;
-                        List<Future<Tuple2<Integer, Map<Integer, Vars>>>> workers = new ArrayList<>(regions.size() - 1);
-                        final Set<String> splice = new ConcurrentHashSet<>();
-                        for (Region region : regions) {
-                            rg = region; // ??
-                            for (int p = region.istart; p <= region.iend; p++) {
-                                List<Tuple2<Integer, Region>> list = pos.get(p);
-                                if (list == null) {
-                                    list = new ArrayList<>();
-                                    pos.put(p, list);
-                                }
-                                list.add(tuple(j, region));
-                            }
-                            ToVarsWorker toVars = new ToVarsWorker(region, bam1, chrs, sample, splice, ampliconBasedCalling, null, conf);
-                            if (workers.size() == regions.size() - 1) {
-                                toPrint.put(executor.submit(new AmpVardictWorker(pos, rg, sample, workers, toVars)));
-                            } else {
-                                workers.add(executor.submit(toVars));
-                            }
-                            j++;
-
-                        }
-                    }
-                    toPrint.put(NULL_FUTURE);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-        });
-
-        try {
-            while (true) {
-                Future<OutputStream> seg = toPrint.take();
-                if (seg == NULL_FUTURE) {
-                    break;
-                }
-                System.out.print(seg.get());
-            }
-        } catch (InterruptedException | ExecutionException e) {
-            e.printStackTrace();
-        }
-        executor.shutdown();
-    }
-
-    private static void ampVardictNotParallel(final List<List<Region>> segs, final Map<String, Integer> chrs, final String ampliconBasedCalling,
-            final String bam1, final String sample, final Configuration conf) throws IOException {
-
-        for (List<Region> regions : segs) {
-            Map<Integer, List<Tuple2<Integer, Region>>> pos = new HashMap<>();
-            int j = 0;
-            Region rg = null;
-            final Set<String> splice = new HashSet<>();
-            List<Map<Integer, Vars>> vars = new ArrayList<>();
-            for (Region region : regions) {
-                rg = region; // ??
-                for (int p = region.istart; p <= region.iend; p++) {
-                    List<Tuple2<Integer, Region>> list = pos.get(p);
-                    if (list == null) {
-                        list = new ArrayList<>();
-                        pos.put(p, list);
-                    }
-                    list.add(tuple(j, region));
-                }
-                vars.add(toVars(region, bam1, getREF(region, chrs, conf.fasta, conf.numberNucleotideToExtend), chrs, sample, splice, ampliconBasedCalling, 0, conf)._2);
-                j++;
-            }
-            ampVardict(rg, vars, pos, sample, splice, conf, System.out);
-        }
-    }
+//    private static void ampVardictNotParallel(final List<List<Region>> segs, final Map<String, Integer> chrs, final String ampliconBasedCalling,
+//                                              final String bam1, final String sample, final Configuration conf) throws IOException {
+//
+//        for (List<Region> regions : segs) {
+//            Map<Integer, List<Tuple2<Integer, Region>>> pos = new HashMap<>();
+//            int j = 0;
+//            Region rg = null;
+//            final Set<String> splice = new HashSet<>();
+//            List<Map<Integer, Vars>> vars = new ArrayList<>();
+//            for (Region region : regions) {
+//                rg = region; // ??
+//                for (int p = region.istart; p <= region.iend; p++) {
+//                    List<Tuple2<Integer, Region>> list = pos.get(p);
+//                    if (list == null) {
+//                        list = new ArrayList<>();
+//                        pos.put(p, list);
+//                    }
+//                    list.add(tuple(j, region));
+//                }
+//                vars.add(toVars(region, bam1, getREF(region, chrs, conf.fasta, conf.numberNucleotideToExtend), chrs, sample, splice, ampliconBasedCalling, 0, conf)._2);
+//                j++;
+//            }
+//            ampVardict(rg, vars, pos, sample, splice, conf, System.out);
+//        }
+//    }
 
     /**
      * amplicon variant calling
      *
-     * @param rg
-     *            region
-     * @param vars
-     *            result of {@link #toVars} calling
+     * @param rg        region
+     * @param vars      result of {@link #toVars} calling
      * @param positions map of positon =&gt; (list of (region number, region))
-     * @param sample sample name
-     * @param splice set of strings representing spliced regions
-     * @param conf configuration
-     * @param out output stream
+     * @param sample    sample name
+     * @param splice    set of strings representing spliced regions
+     * @param conf      configuration
+     * @param out       output stream
      */
     static void ampVardict(Region rg, List<Map<Integer, Vars>> vars, Map<Integer, List<Tuple2<Integer, Region>>> positions,
-            final String sample, final Set<String> splice, final Configuration conf,
-            PrintStream out) {
+                           final String sample, final Set<String> splice, final Configuration conf,
+                           PrintStream out) {
 
         List<Integer> pp = new ArrayList<>(positions.keySet());
         Collections.sort(pp);
@@ -5656,7 +5694,7 @@ public class VarDict {
                         } else if (vars.get(amp).containsKey(p) && vars.get(amp).get(p).ref != null) {
                             badv.add(tuple(vars.get(amp).get(p).ref, regStr));
                         } else {
-                            badv.add(tuple((Variant)null, regStr));
+                            badv.add(tuple((Variant) null, regStr));
                         }
                     } else if ((vref.sp < reg.iend && reg.iend < vref.ep)
                             || (vref.sp < reg.istart && reg.istart < vref.ep)) { // the variant overlap with amplicon's primer
@@ -5755,6 +5793,7 @@ public class VarDict {
 
     /**
      * Adjust the complex variant
+     *
      * @param vref variant
      */
     static void adjComplex(Variant vref) {
@@ -5806,8 +5845,8 @@ public class VarDict {
         if (vars.containsKey(key)) {
             switch (type) {
                 case var:
-                    if (vars.get(key).var.size() > (Integer)keys[0]) {
-                        return vars.get(key).var.get((Integer)keys[0]);
+                    if (vars.get(key).var.size() > (Integer) keys[0]) {
+                        return vars.get(key).var.get((Integer) keys[0]);
                     }
                 case varn:
                     return vars.get(key).varn.get(keys[0]);
@@ -5821,8 +5860,8 @@ public class VarDict {
     private static Variant getVarMaybe(Vars vars, VarsType type, Object... keys) {
         switch (type) {
             case var:
-                if (vars.var.size() > (Integer)keys[0]) {
-                    return vars.var.get((Integer)keys[0]);
+                if (vars.var.size() > (Integer) keys[0]) {
+                    return vars.var.get((Integer) keys[0]);
                 }
             case varn:
                 return vars.varn.get(keys[0]);
@@ -5834,16 +5873,17 @@ public class VarDict {
 
     /**
      * Returns <tt>true</tt> whether a variant meet specified criteria
-     * @param vref variant
-     * @param rref reference variant
-     * @param type Type of variant
+     *
+     * @param vref   variant
+     * @param rref   reference variant
+     * @param type   Type of variant
      * @param splice set of strings representing introns in splice
-     * @param conf Configuration (contains preferences for min, freg, filter and etc)
+     * @param conf   Configuration (contains preferences for min, freg, filter and etc)
      * @return <tt>true</tt> if variant meet specified criteria
      */
     static boolean isGoodVar(Variant vref, Variant rref, String type,
-            Set<String> splice,
-            Configuration conf) {
+                             Set<String> splice,
+                             Configuration conf) {
         if (vref == null || vref.refallele == null || vref.refallele.isEmpty())
             return false;
 
@@ -5895,6 +5935,7 @@ public class VarDict {
 
     /**
      * Find variant type based on variant sequence
+     *
      * @param ref reference sequence
      * @param var variant sequence
      * @return variant type
@@ -5916,10 +5957,11 @@ public class VarDict {
 
     /**
      * Create region from command-line option
-     * @param region Region string from command line
+     *
+     * @param region                   Region string from command line
      * @param numberNucleotideToExtend number of nucleotides to extend region
      * @param chrs
-     * @param zeroBased Are positions zero-based or 1-based
+     * @param zeroBased                Are positions zero-based or 1-based
      * @return Region
      */
     private static Region buildRegion(String region, final int numberNucleotideToExtend, Map<String, Integer> chrs, final boolean zeroBased) {
@@ -5944,18 +5986,19 @@ public class VarDict {
 
     /**
      * Modify the CIGAR for potential mis-alignment for indels at the end of reads to softclipping and let VarDict's algorithm to figure out indels
-     * @param indel lenght of insert/delete
-     * @param ref Map of reference sequence (key - position, value - base)
+     *
+     * @param indel     lenght of insert/delete
+     * @param ref       Map of reference sequence (key - position, value - base)
      * @param oPosition Position of first matched base in sequence
-     * @param oCigar Original CIGAR string
-     * @param querySeq Base sequence
+     * @param oCigar    Original CIGAR string
+     * @param querySeq  Base sequence
      * @param queryQual
      * @param lowqual
      * @return Tuple of (adjusted position of first matched base, modified CIGAR string)
      */
     static Tuple2<Integer, String> modifyCigar(int indel, Map<Integer, Character> ref,
-            final int oPosition, final String oCigar, final String querySeq,
-            final String queryQual, final int lowqual) {
+                                               final int oPosition, final String oCigar, final String querySeq,
+                                               final String queryQual, final int lowqual) {
 
         int position = oPosition;
         String cigarStr = oCigar;
@@ -6158,14 +6201,14 @@ public class VarDict {
             //number of bases after refoff/rdoff that match in reference and read sequences
             int rn = 0;
             Set<Character> RN = new HashSet<Character>();
-            while( rn + 1 < soft
+            while (rn + 1 < soft
                     && isHasAndEquals(ref, refoff + rn + 1, querySeq, rdoff + rn + 1)
-                    && queryQual.charAt(rdoff + rn + 1) - 33 > lowqual ) {
+                    && queryQual.charAt(rdoff + rn + 1) - 33 > lowqual) {
                 rn++;
                 RN.add(ref.get(refoff + rn + 1));
             }
             int rn_nt = RN.size(); // don't adjust if homopolymer
-            if ( (rn > 3 && rn_nt > 1) || (isHasAndEquals(ref, refoff, querySeq, rdoff))) { //If more than 3 bases match after refoff/rdoff or base at refoff/rdoff match
+            if ((rn > 3 && rn_nt > 1) || (isHasAndEquals(ref, refoff, querySeq, rdoff))) { //If more than 3 bases match after refoff/rdoff or base at refoff/rdoff match
                 mch += rn + 1;
                 soft -= rn + 1;
                 if (soft > 0) {
@@ -6201,7 +6244,7 @@ public class VarDict {
                 RN.add(ref.get(position - rn - 2));
             }
             int rn_nt = RN.size();
-            if ((rn > 3 && rn_nt > 1) || (isHasAndEquals(ref, position - 1, querySeq, soft -1 ))) {//If more than 3 bases match before matched sequence or last base of clipped sequence matches
+            if ((rn > 3 && rn_nt > 1) || (isHasAndEquals(ref, position - 1, querySeq, soft - 1))) {//If more than 3 bases match before matched sequence or last base of clipped sequence matches
                 //Replace the S-M complex with either match or match-soft clip
                 mch += rn + 1;
                 soft -= rn + 1;
@@ -6234,7 +6277,7 @@ public class VarDict {
             char ch2 = s.charAt(1);
             if (ch2 == '&' && isATGC(ch1)) {
                 for (int i = 2; i < s.length(); i++) {
-                    if(!isATGC(s.charAt(i))) {
+                    if (!isATGC(s.charAt(i))) {
                         return false;
                     }
                 }

@@ -1,12 +1,14 @@
 package com.astrazeneca.vardict;
 
 import static com.astrazeneca.vardict.VarDict.DEFAULT_BED_ROW_FORMAT;
+
 import htsjdk.samtools.ValidationStringency;
 
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
 
+import htsjdk.samtools.util.RuntimeEOFException;
 import org.apache.commons.cli.*;
 
 import com.astrazeneca.vardict.VarDict.BedRowFormat;
@@ -14,7 +16,13 @@ import com.astrazeneca.vardict.VarDict.BedRowFormat;
 public class Main {
 
 
-    public static void main(String[] args) throws ParseException, IOException {
+    public static void main(String[] args) throws IOException, ParseException {
+        Configuration conf = getConfigurationFromArgs(args);
+        VarDict.start(conf);
+
+    }
+
+    public static Configuration getConfigurationFromArgs(String[] args) throws ParseException, IOException {
         Options options = buildOptions();
         CommandLineParser parser = new BasicParser();
         try {
@@ -22,11 +30,11 @@ public class Main {
             if (cmd.getOptions().length == 0 || cmd.hasOption("H")) {
                 help(options);
             }
-            new Main().run(cmd);
+            return parseCmd(cmd);
         } catch (MissingOptionException e) {
             List<?> missingOptions = e.getMissingOptions();
             System.err.print("Missing required option(s): ");
-            for (Iterator<?> iterator = missingOptions.iterator(); iterator.hasNext();) {
+            for (Iterator<?> iterator = missingOptions.iterator(); iterator.hasNext(); ) {
                 Object object = iterator.next();
                 System.err.print(object);
                 if (iterator.hasNext()) {
@@ -36,10 +44,11 @@ public class Main {
             }
             System.err.println();
             help(options);
+            throw new RuntimeException();
         }
     }
 
-    private void run(CommandLine cmd) throws ParseException, IOException {
+    private static Configuration parseCmd(CommandLine cmd) throws ParseException, IOException {
         Configuration conf = new Configuration();
 
         // -v is not used
@@ -61,6 +70,8 @@ public class Main {
         conf.performLocalRealignment = 1 == getIntValue(cmd, "k", 1);
         conf.fasta = cmd.getOptionValue("G", "/ngs/reference_data/genomes/Hsapiens/hg19/seq/hg19.fa");
 
+        conf.outputVcf = cmd.getOptionValue("outputVcf");
+
         conf.regionOfInterest = cmd.getOptionValue("R");
         conf.delimiter = cmd.getOptionValue("d", "\t");
         conf.sampleName = cmd.getOptionValue("N");
@@ -70,7 +81,7 @@ public class Main {
             if (regexp.startsWith("/"))
                 regexp = regexp.substring(1);
             if (regexp.endsWith("/"))
-                regexp = regexp.substring(0, regexp.length() -1);
+                regexp = regexp.substring(0, regexp.length() - 1);
             conf.sampleNameRegexp = regexp;
         }
         conf.bam = new Configuration.BamNames(cmd.getOptionValue("b"));
@@ -97,10 +108,10 @@ public class Main {
         conf.minr = getIntValue(cmd, "r", 2);
         conf.minb = getIntValue(cmd, "B", 2);
         if (cmd.hasOption("Q")) {
-            conf.mappingQuality = ((Number)cmd.getParsedOptionValue("Q")).intValue();
+            conf.mappingQuality = ((Number) cmd.getParsedOptionValue("Q")).intValue();
         }
         conf.goodq = getIntValue(cmd, "q", 25);
-        conf.mismatch =  getIntValue(cmd, "m", 8);
+        conf.mismatch = getIntValue(cmd, "m", 8);
         conf.trimBasesAfter = getIntValue(cmd, "T", 0);
         conf.vext = getIntValue(cmd, "X", 3);
         conf.readPosFilter = getIntValue(cmd, "P", 5);
@@ -122,7 +133,7 @@ public class Main {
         conf.outputSplicing = cmd.hasOption('i');
 
         if (cmd.hasOption('M')) {
-            conf.minmatch = ((Number)cmd.getParsedOptionValue("M")).intValue();
+            conf.minmatch = ((Number) cmd.getParsedOptionValue("M")).intValue();
         }
 
         if (cmd.hasOption("VS")) {
@@ -131,18 +142,18 @@ public class Main {
 
         conf.threads = Math.max(readThreadsCount(cmd), 1);
 
-        VarDict.start(conf);
+        return conf;
 
     }
 
-    private int readThreadsCount(CommandLine cmd) throws ParseException {
+    private static int readThreadsCount(CommandLine cmd) throws ParseException {
         int threads = 0;
         if (cmd.hasOption("th")) {
             Object value = cmd.getParsedOptionValue("th");
             if (value == null) {
                 threads = Runtime.getRuntime().availableProcessors();
             } else {
-                threads = ((Number)value).intValue();
+                threads = ((Number) value).intValue();
             }
         }
         return threads;
@@ -150,17 +161,17 @@ public class Main {
 
     private static int getIntValue(CommandLine cmd, String opt, int defaultValue) throws ParseException {
         Object value = cmd.getParsedOptionValue(opt);
-        return  value == null ? defaultValue : ((Number)value).intValue();
+        return value == null ? defaultValue : ((Number) value).intValue();
     }
 
     private static double getDoubleValue(CommandLine cmd, String opt, double defaultValue) throws ParseException {
         Object value = cmd.getParsedOptionValue(opt);
-        return  value == null ? defaultValue : ((Number)value).doubleValue();
+        return value == null ? defaultValue : ((Number) value).doubleValue();
     }
 
     private static int getColumnValue(CommandLine cmd, String opt, int defaultValue) throws ParseException {
         Object value = cmd.getParsedOptionValue(opt);
-        return  value == null ? defaultValue : ((Number)value).intValue() - 1;
+        return value == null ? defaultValue : ((Number) value).intValue() - 1;
     }
 
     @SuppressWarnings("static-access")
@@ -257,6 +268,13 @@ public class Main {
                 .withType(String.class)
                 .isRequired(true)
                 .create('b'));
+
+        options.addOption(OptionBuilder.withArgName("string")
+                .hasArg(true)
+                .withDescription("The output Vcf file")
+                .withType(String.class)
+                .isRequired(true)
+                .create("outputVcf"));
 
         options.addOption(OptionBuilder.withArgName("INT")
                 .hasArg(true)
@@ -440,23 +458,23 @@ public class Main {
         HelpFormatter formater = new HelpFormatter();
         formater.setOptionComparator(null);
         formater.printHelp(142, "vardict [-n name_reg] [-b bam] [-c chr] [-S start] [-E end] [-s seg_starts] [-e seg_ends] "
-                + "[-x #_nu] [-g gene] [-f freq] [-r #_reads] [-B #_reads] region_info",
-    "VarDict is a variant calling program for SNV, MNV, indels (<120 bp), and complex variants.  It accepts any BAM format, either\n"+
-    "from DNA-seq or RNA-seq.  There're several distinct features over other variant callers.  First, it can perform local\n"+
-    "realignment over indels on the fly for more accurate allele frequencies of indels.  Second, it rescues softly clipped reads\n"+
-    "to identify indels not present in the alignments or support existing indels.  Third, when given the PCR amplicon information,\n"+
-    "it'll perform amplicon-based variant calling and filter out variants that show amplicon bias, a common false positive in PCR\n"+
-    "based targeted deep sequencing.  Forth, it has very efficient memory management and memory usage is linear to the region of\n"+
-    "interest, not the depth.  Five, it can handle ultra-deep sequencing and the performance is only linear to the depth.  It has\n"+
-    "been tested on depth over 2M reads.  Finally, it has a build-in capability to perform paired sample analysis, intended for\n"+
-    "somatic mutation identification, comparing DNA-seq and RNA-seq, or resistant vs sensitive in cancer research.  By default,\n"+
-    "the region_info is an entry of refGene.txt from IGV, but can be any region or bed files.\nOptions:",
-    options, "AUTHOR\n"
-            + ".       Written by Zhongwu Lai, AstraZeneca, Boston, USA\n\n"
-            + "REPORTING BUGS\n"
-            + ".       Report bugs to zhongwu@yahoo.com\n\n"
-            + "COPYRIGHT\n"
-            + ".       This is free software: you are free to change and redistribute it.  There is NO WARRANTY, to the extent permitted by law.");
+                        + "[-x #_nu] [-g gene] [-f freq] [-r #_reads] [-B #_reads] region_info",
+                "VarDict is a variant calling program for SNV, MNV, indels (<120 bp), and complex variants.  It accepts any BAM format, either\n" +
+                        "from DNA-seq or RNA-seq.  There're several distinct features over other variant callers.  First, it can perform local\n" +
+                        "realignment over indels on the fly for more accurate allele frequencies of indels.  Second, it rescues softly clipped reads\n" +
+                        "to identify indels not present in the alignments or support existing indels.  Third, when given the PCR amplicon information,\n" +
+                        "it'll perform amplicon-based variant calling and filter out variants that show amplicon bias, a common false positive in PCR\n" +
+                        "based targeted deep sequencing.  Forth, it has very efficient memory management and memory usage is linear to the region of\n" +
+                        "interest, not the depth.  Five, it can handle ultra-deep sequencing and the performance is only linear to the depth.  It has\n" +
+                        "been tested on depth over 2M reads.  Finally, it has a build-in capability to perform paired sample analysis, intended for\n" +
+                        "somatic mutation identification, comparing DNA-seq and RNA-seq, or resistant vs sensitive in cancer research.  By default,\n" +
+                        "the region_info is an entry of refGene.txt from IGV, but can be any region or bed files.\nOptions:",
+                options, "AUTHOR\n"
+                        + ".       Written by Zhongwu Lai, AstraZeneca, Boston, USA\n\n"
+                        + "REPORTING BUGS\n"
+                        + ".       Report bugs to zhongwu@yahoo.com\n\n"
+                        + "COPYRIGHT\n"
+                        + ".       This is free software: you are free to change and redistribute it.  There is NO WARRANTY, to the extent permitted by law.");
 
         System.exit(0);
     }
